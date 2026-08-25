@@ -230,34 +230,56 @@ private BroadcastReceiver refreshReceiver;
         }
     }
 
+    private boolean isLongPressHandled = false;
+
     // ══ الريموت — كل الأزرار ══
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (webView == null) return super.dispatchKeyEvent(event);
-int action = event.getAction();
-boolean isLongPress = event.isLongPress();
+        int action = event.getAction();
+        int keyCode = event.getKeyCode();
 
-if (action == KeyEvent.ACTION_DOWN && isLongPress) {
-    int kc = event.getKeyCode();
-    if (kc == KeyEvent.KEYCODE_DPAD_CENTER ||
-        kc == KeyEvent.KEYCODE_ENTER ||
-        kc == KeyEvent.KEYCODE_NUMPAD_ENTER ||
-        kc == KeyEvent.KEYCODE_BUTTON_A) {
-        final String ljs = "tvKey('OK_LONG')";
-        webView.post(new Runnable() {
-            public void run() {
-                webView.evaluateJavascript(
-                    "(function(){if(typeof tvKey==='function'){" + ljs + "}})()", null);
+        boolean isSelectKey = (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                               keyCode == KeyEvent.KEYCODE_ENTER ||
+                               keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                               keyCode == KeyEvent.KEYCODE_BUTTON_A);
+
+        if (isSelectKey) {
+            if (action == KeyEvent.ACTION_DOWN) {
+                if (event.isLongPress()) {
+                    isLongPressHandled = true;
+                    webView.post(new Runnable() {
+                        public void run() {
+                            webView.evaluateJavascript(
+                                "(function(){if(typeof tvKey==='function'){tvKey('OK_LONG');}})()", null);
+                        }
+                    });
+                    return true;
+                }
+                if (event.getRepeatCount() == 0) {
+                    isLongPressHandled = false;
+                    event.startTracking();
+                }
+                return true;
+            } else if (action == KeyEvent.ACTION_UP) {
+                if (isLongPressHandled) {
+                    isLongPressHandled = false;
+                    return true;
+                }
+                webView.post(new Runnable() {
+                    public void run() {
+                        webView.evaluateJavascript(
+                            "(function(){if(typeof tvKey==='function'){tvKey('OK');}})()", null);
+                    }
+                });
+                return true;
             }
-        });
-        return true;
-    }
-}
+        }
 
-if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
+        if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
 
         final String js;
-        switch (event.getKeyCode()) {
+        switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
             case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP:    js="tvKey('UP')"; break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
@@ -266,10 +288,6 @@ if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
             case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT:  js="tvKey('LEFT')"; break;
             case KeyEvent.KEYCODE_DPAD_RIGHT:
             case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT: js="tvKey('RIGHT')"; break;
-            case KeyEvent.KEYCODE_DPAD_CENTER:
-            case KeyEvent.KEYCODE_ENTER:
-            case KeyEvent.KEYCODE_NUMPAD_ENTER:
-            case KeyEvent.KEYCODE_BUTTON_A:                js="tvKey('OK')"; break;
             case KeyEvent.KEYCODE_BACK:
             case KeyEvent.KEYCODE_ESCAPE:                  js="tvKey('BACK')"; break;
             case KeyEvent.KEYCODE_MENU:                    js="openAllSettings()"; break;
@@ -284,6 +302,27 @@ if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
             }
         });
         return true;
+    }
+
+    @Override
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+        boolean isSelectKey = (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                               keyCode == KeyEvent.KEYCODE_ENTER ||
+                               keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                               keyCode == KeyEvent.KEYCODE_BUTTON_A);
+        if (isSelectKey) {
+            isLongPressHandled = true;
+            if (webView != null) {
+                webView.post(new Runnable() {
+                    public void run() {
+                        webView.evaluateJavascript(
+                            "(function(){if(typeof tvKey==='function'){tvKey('OK_LONG');}})()", null);
+                    }
+                });
+            }
+            return true;
+        }
+        return super.onKeyLongPress(keyCode, event);
     }
 
     @Override public void onBackPressed() {}
