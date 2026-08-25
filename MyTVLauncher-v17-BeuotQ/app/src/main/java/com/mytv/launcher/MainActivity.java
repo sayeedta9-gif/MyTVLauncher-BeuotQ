@@ -391,6 +391,25 @@ if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
 }
 
         @JavascriptInterface
+        public void openSmartBoxSettings() {
+            try {
+                PackageManager pm = getPackageManager();
+                Intent intent = pm.getLaunchIntentForPackage("com.droidlogic.mboxsettings");
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } else {
+                    openSystemSettings();
+                }
+            } catch (android.content.ActivityNotFoundException e) {
+                Log.e("TV", "SmartBox settings ActivityNotFoundException: " + e.getMessage());
+                openSystemSettings();
+            } catch (Exception e) {
+                Log.e("TV", "SmartBox settings exception: " + e.getMessage());
+            }
+        }
+
+        @JavascriptInterface
         public void openSystemSettings() {
             try { startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS)); } catch (Exception e) {}
         }
