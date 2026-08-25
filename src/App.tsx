@@ -19,7 +19,10 @@ import {
   SlidersHorizontal,
   Zap,
   ChevronRight,
-  Monitor
+  Monitor,
+  Sparkles,
+  Layers,
+  Flame
 } from 'lucide-react';
 
 interface AppItem {
@@ -92,6 +95,7 @@ const MOCK_APPS: AppItem[] = [
 export default function App() {
   const [apps, setApps] = useState<AppItem[]>([]);
   const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'search'>('home');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [focusArea, setFocusArea] = useState<'header' | 'grid' | 'optionsModal' | 'settingsModal'>('grid');
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
@@ -102,6 +106,7 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsFocusedIndex, setSettingsFocusedIndex] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [currentDate, setCurrentDate] = useState<string>('');
   const [isWifi, setIsWifi] = useState<boolean>(true);
   const [memInfo, setMemInfo] = useState<MemoryInfo>({ avail: 0, total: 0 });
   const [boostMsg, setBoostMsg] = useState<string | null>(null);
@@ -150,6 +155,9 @@ export default function App() {
       const now = new Date();
       setCurrentTime(
         now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      );
+      setCurrentDate(
+        now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
       );
     };
     updateTime();
@@ -230,9 +238,14 @@ export default function App() {
   }, [refreshApps, openSideSettings]);
 
   const filteredApps = apps.filter((app) => {
-    if (!searchQuery.trim()) return true;
-    return app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           app.pkg.toLowerCase().includes(searchQuery.toLowerCase());
+    if (searchQuery.trim()) {
+      return app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             app.pkg.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    if (selectedCategory !== 'All' && app.category) {
+      return app.category.toLowerCase() === selectedCategory.toLowerCase();
+    }
+    return true;
   });
 
   const COLS = 5; // 5 columns grid
@@ -281,7 +294,7 @@ export default function App() {
       icon: SlidersHorizontal,
       title: 'SmartBox Settings',
       subtitle: 'DroidLogic TV Box display & audio settings',
-      color: 'from-blue-600 to-indigo-600',
+      color: 'from-blue-600 via-indigo-600 to-blue-700',
       action: () => {
         handleSmartBoxSettings();
       }
@@ -291,7 +304,7 @@ export default function App() {
       icon: Settings,
       title: 'Android System Settings',
       subtitle: 'Network, accounts, storage & preferences',
-      color: 'from-purple-600 to-pink-600',
+      color: 'from-purple-600 via-pink-600 to-purple-700',
       action: () => {
         if (window.AndroidBridge?.openSystemSettings) {
           window.AndroidBridge.openSystemSettings();
@@ -305,7 +318,7 @@ export default function App() {
       icon: Wifi,
       title: 'Network & Connection',
       subtitle: isWifi ? 'Wi-Fi connected' : 'Wi-Fi disconnected',
-      color: 'from-emerald-600 to-teal-600',
+      color: 'from-emerald-600 via-teal-600 to-emerald-700',
       action: () => {
         if (window.AndroidBridge?.openSystemSettings) {
           window.AndroidBridge.openSystemSettings();
@@ -319,7 +332,7 @@ export default function App() {
       icon: Bell,
       title: 'Notification Access',
       subtitle: 'Manage app notification permissions',
-      color: 'from-amber-600 to-orange-600',
+      color: 'from-amber-600 via-orange-600 to-amber-700',
       action: () => {
         if (window.AndroidBridge?.requestNotificationAccess) {
           window.AndroidBridge.requestNotificationAccess();
@@ -333,7 +346,7 @@ export default function App() {
       icon: Zap,
       title: 'Boost System Memory',
       subtitle: 'Clean background apps & optimize RAM',
-      color: 'from-cyan-600 to-blue-600',
+      color: 'from-cyan-600 via-blue-600 to-cyan-700',
       action: () => {
         handleBoost();
       }
@@ -343,7 +356,7 @@ export default function App() {
       icon: X,
       title: 'Close Settings Panel',
       subtitle: 'Return to launcher home screen',
-      color: 'from-neutral-700 to-neutral-800',
+      color: 'from-neutral-700 via-neutral-800 to-neutral-900',
       action: () => {
         setShowSettingsModal(false);
         setFocusArea('header');
@@ -423,10 +436,12 @@ export default function App() {
               break;
             case 1:
               setActiveTab('home');
+              setSelectedCategory('All');
               setSearchQuery('');
               break;
             case 2:
               setActiveTab('apps');
+              setSelectedCategory('All');
               setSearchQuery('');
               break;
             case 3:
@@ -585,23 +600,28 @@ export default function App() {
   }, [settingsFocusedIndex, showSettingsModal, focusArea]);
 
   return (
-    <div className="relative w-screen h-screen bg-neutral-950 text-white overflow-hidden flex flex-col font-sans select-none">
-      {/* Background Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/80 to-neutral-950/90 pointer-events-none z-0" />
+    <div className="relative w-screen h-screen bg-[#08090e] text-white overflow-hidden flex flex-col font-sans select-none bg-ambient-glow">
+      {/* Dynamic Ambient Background Glow Highlights */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 -right-32 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header Navigation Bar */}
-      <header className="relative z-10 flex items-center justify-between px-10 py-5 bg-neutral-900/40 backdrop-blur-md border-b border-neutral-800/50">
-        {/* Left Side: Modern Google TV Logo */}
+      <header className="relative z-20 flex items-center justify-between px-10 py-4.5 glass-header">
+        {/* Left Side: Modern Google TV Brand Logo */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 group cursor-pointer">
-            <span className="text-2xl font-bold tracking-tight text-white flex items-center gap-1.5">
+          <div className="flex items-center gap-2.5 group cursor-pointer">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/20">
+              <Tv className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-1">
               <span className="text-blue-500 font-extrabold">G</span>
               <span className="text-red-500 font-extrabold">o</span>
               <span className="text-yellow-500 font-extrabold">o</span>
               <span className="text-blue-500 font-extrabold">g</span>
               <span className="text-green-500 font-extrabold">l</span>
               <span className="text-red-500 font-extrabold">e</span>
-              <span className="text-neutral-300 font-medium ml-1.5">tv</span>
+              <span className="text-neutral-200 font-semibold ml-1 text-xl">tv</span>
             </span>
           </div>
 
@@ -620,13 +640,13 @@ export default function App() {
               title="Voice Search"
               data-focusable="true"
               tabIndex={0}
-              className={`relative group flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+              className={`relative group flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 border ${
                 focusArea === 'header' && focusedHeaderItem === 0
-                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white border-blue-400 ring-4 ring-blue-400/60 scale-110 shadow-lg shadow-blue-500/40'
-                  : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80 hover:border-neutral-600'
+                  ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white border-blue-400 ring-4 ring-blue-400/80 scale-110 shadow-[0_0_25px_rgba(59,130,246,0.7)] z-10'
+                  : 'glass-card text-blue-400 hover:bg-white/10 hover:border-white/20'
               }`}
             >
-              <div className="absolute inset-0 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-red-500 to-yellow-500 opacity-30 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              <div className="absolute inset-0 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-red-500 to-yellow-500 opacity-20 group-hover:opacity-100 transition-opacity pointer-events-none" />
               <Mic className={`w-5 h-5 relative z-10 ${focusArea === 'header' && focusedHeaderItem === 0 ? 'text-white animate-pulse' : 'text-blue-400'}`} />
             </button>
 
@@ -634,19 +654,18 @@ export default function App() {
             <button
               onClick={() => {
                 setActiveTab('home');
+                setSelectedCategory('All');
                 setFocusArea('header');
                 setFocusedHeaderItem(1);
               }}
               data-focusable="true"
               tabIndex={0}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-                activeTab === 'home'
-                  ? 'bg-white/20 text-white'
-                  : 'text-neutral-400 hover:text-white'
-              } ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 border ${
                 focusArea === 'header' && focusedHeaderItem === 1
-                  ? 'bg-white text-neutral-900 ring-4 ring-white/40 scale-105 shadow-md font-bold'
-                  : ''
+                  ? 'bg-white text-neutral-950 font-extrabold border-white ring-4 ring-white/60 scale-108 shadow-[0_0_20px_rgba(255,255,255,0.6)] z-10'
+                  : activeTab === 'home'
+                  ? 'bg-white/15 text-white border-white/20 font-bold shadow-sm'
+                  : 'text-neutral-400 hover:text-white border-transparent'
               }`}
             >
               <HomeIcon className="w-4 h-4" />
@@ -657,19 +676,18 @@ export default function App() {
             <button
               onClick={() => {
                 setActiveTab('apps');
+                setSelectedCategory('All');
                 setFocusArea('header');
                 setFocusedHeaderItem(2);
               }}
               data-focusable="true"
               tabIndex={0}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-                activeTab === 'apps'
-                  ? 'bg-white/20 text-white'
-                  : 'text-neutral-400 hover:text-white'
-              } ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 border ${
                 focusArea === 'header' && focusedHeaderItem === 2
-                  ? 'bg-white text-neutral-900 ring-4 ring-white/40 scale-105 shadow-md font-bold'
-                  : ''
+                  ? 'bg-white text-neutral-950 font-extrabold border-white ring-4 ring-white/60 scale-108 shadow-[0_0_20px_rgba(255,255,255,0.6)] z-10'
+                  : activeTab === 'apps'
+                  ? 'bg-white/15 text-white border-white/20 font-bold shadow-sm'
+                  : 'text-neutral-400 hover:text-white border-transparent'
               }`}
             >
               <Grid className="w-4 h-4" />
@@ -678,9 +696,9 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Right Side: Standardized Circular Action Icons & Time */}
+        {/* Right Side: Circular Action Buttons & Date / Time */}
         <div className="flex items-center gap-3">
-          {/* 1. Device Optimizer Icon */}
+          {/* 1. Device Optimizer Button */}
           <button
             onClick={() => {
               setFocusArea('header');
@@ -690,16 +708,16 @@ export default function App() {
             title="Device Optimizer"
             data-focusable="true"
             tabIndex={0}
-            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 border ${
               focusArea === 'header' && focusedHeaderItem === 3
-                ? 'bg-blue-600 text-white border-blue-400 ring-4 ring-blue-400/60 scale-110 shadow-lg shadow-blue-500/40'
-                : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+                ? 'bg-gradient-to-tr from-blue-600 to-cyan-500 text-white border-blue-300 ring-4 ring-blue-400/80 scale-110 shadow-[0_0_20px_rgba(59,130,246,0.7)] z-10'
+                : 'glass-card text-neutral-300 hover:bg-white/10 hover:border-white/20'
             }`}
           >
             <Cpu className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 3 ? 'text-white' : 'text-blue-400'}`} />
           </button>
 
-          {/* 2. Wi-Fi Icon */}
+          {/* 2. Wi-Fi Status Button */}
           <button
             onClick={() => {
               setFocusArea('header');
@@ -711,10 +729,10 @@ export default function App() {
             title={isWifi ? 'Wi-Fi Connected' : 'Wi-Fi Disconnected'}
             data-focusable="true"
             tabIndex={0}
-            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 border ${
               focusArea === 'header' && focusedHeaderItem === 4
-                ? 'bg-emerald-600 text-white border-emerald-400 ring-4 ring-emerald-400/60 scale-110 shadow-lg shadow-emerald-500/40'
-                : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+                ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-white border-emerald-300 ring-4 ring-emerald-400/80 scale-110 shadow-[0_0_20px_rgba(16,185,129,0.7)] z-10'
+                : 'glass-card text-neutral-300 hover:bg-white/10 hover:border-white/20'
             }`}
           >
             {isWifi ? (
@@ -724,7 +742,7 @@ export default function App() {
             )}
           </button>
 
-          {/* 3. Notifications Icon */}
+          {/* 3. Notifications Button */}
           <button
             onClick={() => {
               setFocusArea('header');
@@ -736,19 +754,19 @@ export default function App() {
             title="Notifications"
             data-focusable="true"
             tabIndex={0}
-            className={`relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            className={`relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 border ${
               focusArea === 'header' && focusedHeaderItem === 5
-                ? 'bg-amber-600 text-white border-amber-400 ring-4 ring-amber-400/60 scale-110 shadow-lg shadow-amber-500/40'
-                : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+                ? 'bg-gradient-to-tr from-amber-600 to-orange-500 text-white border-amber-300 ring-4 ring-amber-400/80 scale-110 shadow-[0_0_20px_rgba(245,158,11,0.7)] z-10'
+                : 'glass-card text-neutral-300 hover:bg-white/10 hover:border-white/20'
             }`}
           >
             <Bell className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 5 ? 'text-white' : 'text-amber-400'}`} />
             {notifications.length > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-neutral-900" />
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-400 rounded-full ring-2 ring-neutral-950 animate-pulse" />
             )}
           </button>
 
-          {/* 4. File Manager Icon */}
+          {/* 4. File Manager Button */}
           <button
             onClick={() => {
               setFocusArea('header');
@@ -762,10 +780,10 @@ export default function App() {
             title="File Manager"
             data-focusable="true"
             tabIndex={0}
-            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 border ${
               focusArea === 'header' && focusedHeaderItem === 6
-                ? 'bg-indigo-600 text-white border-indigo-400 ring-4 ring-indigo-400/60 scale-110 shadow-lg shadow-indigo-500/40'
-                : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+                ? 'bg-gradient-to-tr from-indigo-600 to-purple-500 text-white border-indigo-300 ring-4 ring-indigo-400/80 scale-110 shadow-[0_0_20px_rgba(99,102,241,0.7)] z-10'
+                : 'glass-card text-neutral-300 hover:bg-white/10 hover:border-white/20'
             }`}
           >
             <Folder className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 6 ? 'text-white' : 'text-indigo-400'}`} />
@@ -781,46 +799,66 @@ export default function App() {
             title="Settings"
             data-focusable="true"
             tabIndex={0}
-            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300 border ${
               focusArea === 'header' && focusedHeaderItem === 7
-                ? 'bg-purple-600 text-white border-purple-400 ring-4 ring-purple-400/60 scale-110 shadow-lg shadow-purple-500/40'
-                : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+                ? 'bg-gradient-to-tr from-purple-600 to-pink-500 text-white border-purple-300 ring-4 ring-purple-400/80 scale-110 shadow-[0_0_20px_rgba(168,85,247,0.7)] z-10'
+                : 'glass-card text-neutral-300 hover:bg-white/10 hover:border-white/20'
             }`}
           >
             <Settings className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 7 ? 'text-white' : 'text-purple-400'}`} />
           </button>
 
-          {/* Clock */}
-          <div className="ml-2 text-lg font-medium text-neutral-200 tracking-wider">
-            {currentTime || '12:00 PM'}
+          {/* Clock & Date Badge */}
+          <div className="ml-3 flex flex-col items-end justify-center glass-card px-4 py-1.5 rounded-full border border-white/10 shadow-sm">
+            <span className="text-sm font-mono font-bold tracking-wider text-white">
+              {currentTime || '12:00 PM'}
+            </span>
+            {currentDate && (
+              <span className="text-[10px] font-semibold text-neutral-400 tracking-tight">
+                {currentDate}
+              </span>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Boost Message Banner */}
+      {/* Boost Notification Banner */}
       {boostMsg && (
-        <div className="absolute top-20 right-10 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-xl text-sm font-semibold animate-bounce">
-          {boostMsg}
+        <div className="absolute top-20 right-10 z-50 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-2xl shadow-2xl text-sm font-bold border border-white/20 flex items-center gap-2 animate-bounce">
+          <Sparkles className="w-4 h-4 text-yellow-300 animate-spin" />
+          <span>{boostMsg}</span>
         </div>
       )}
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 px-10 pt-6 pb-10 overflow-hidden flex flex-col">
-        {/* Section Header */}
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold tracking-wide text-neutral-200 flex items-center gap-2">
-            <Grid className="w-5 h-5 text-blue-400" />
-            {activeTab === 'apps' ? 'Your Applications' : 'Your Apps & Games'}
-          </h2>
-          <span className="text-xs text-neutral-400 font-medium bg-neutral-900/80 px-3 py-1 rounded-full border border-neutral-800">
-            {filteredApps.length} installed
-          </span>
+      <main className="relative z-10 flex-1 px-10 pt-6 pb-8 overflow-hidden flex flex-col">
+        {/* Section Header & Category Filters */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shadow-inner">
+              <Grid className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                {activeTab === 'apps' ? 'Applications Library' : 'Apps & Entertainment'}
+              </h2>
+              <p className="text-xs text-neutral-400 font-medium">Quick access to your installed launcher apps</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Installed App Count Pill */}
+            <span className="text-xs text-neutral-300 font-semibold glass-card px-4 py-1.5 rounded-full border border-white/10 shadow-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{filteredApps.length} Apps Installed</span>
+            </span>
+          </div>
         </div>
 
-        {/* Apps Grid */}
+        {/* 5-Column App Grid */}
         <div
           ref={gridContainerRef}
-          className="grid grid-cols-5 gap-6 overflow-y-auto pr-2 flex-1 scrollbar-none py-2"
+          className="grid grid-cols-5 gap-6 overflow-y-auto pr-2 flex-1 scrollbar-none py-3"
         >
           {filteredApps.map((app, index) => {
             const isFocused = focusArea === 'grid' && focusedIndex === index;
@@ -846,40 +884,55 @@ export default function App() {
                 }}
                 data-focusable="true"
                 tabIndex={0}
-                className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl cursor-pointer transition-all duration-200 ease-out border ${
+                className={`group relative flex flex-col items-center justify-center p-6 rounded-3xl cursor-pointer transition-all duration-300 ease-out border ${
                   isFocused
-                    ? 'bg-neutral-800/90 border-blue-500 ring-4 ring-blue-500/60 scale-105 shadow-2xl shadow-blue-500/30 z-20'
-                    : 'bg-neutral-900/60 border-neutral-800/80 hover:bg-neutral-800/80 hover:border-neutral-700'
+                    ? 'glass-card-focused scale-110 z-30 focus-glow-blue border-blue-400/90 ring-4 ring-blue-500/80 bg-gradient-to-b from-blue-900/40 via-neutral-900/90 to-neutral-900/95 shadow-[0_0_35px_rgba(59,130,246,0.5)]'
+                    : 'glass-card hover:bg-white/10 hover:border-white/20'
                 }`}
               >
-                {/* App Icon / Banner */}
-                <div className="w-20 h-20 mb-3 flex items-center justify-center rounded-2xl bg-neutral-800/80 p-2 shadow-inner group-hover:scale-105 transition-transform">
+                {/* App Icon Container */}
+                <div className={`w-20 h-20 mb-3.5 flex items-center justify-center rounded-2xl p-2.5 transition-all duration-300 ${
+                  isFocused
+                    ? 'bg-neutral-800/90 border border-blue-400/40 shadow-lg scale-105'
+                    : 'bg-neutral-900/80 border border-white/10 shadow-inner group-hover:scale-105'
+                }`}>
                   {app.icon ? (
                     <img
                       src={`data:image/png;base64,${app.icon}`}
                       alt={app.name}
-                      className="w-full h-full object-contain rounded-xl"
+                      className="w-full h-full object-contain rounded-xl drop-shadow"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = 'none';
                       }}
                     />
                   ) : (
-                    <Tv className="w-10 h-10 text-neutral-400" />
+                    <Tv className={`w-10 h-10 ${isFocused ? 'text-blue-400' : 'text-neutral-400'}`} />
                   )}
                 </div>
 
-                {/* App Name */}
+                {/* App Name Title */}
                 <span
-                  className={`text-sm font-semibold text-center truncate w-full px-1 ${
-                    isFocused ? 'text-white font-bold' : 'text-neutral-300'
+                  className={`text-sm font-bold text-center truncate w-full px-1 transition-all duration-200 ${
+                    isFocused ? 'text-white text-base font-extrabold tracking-wide drop-shadow-md' : 'text-neutral-200 tracking-tight'
                   }`}
                 >
                   {app.name}
                 </span>
 
-                {/* Focus Indicator Badge */}
+                {/* App Category Tag */}
+                {app.category && (
+                  <span className={`text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full mt-1.5 transition-all ${
+                    isFocused
+                      ? 'bg-blue-500/30 text-blue-200 border border-blue-400/40'
+                      : 'bg-white/5 text-neutral-400 border border-white/5'
+                  }`}>
+                    {app.category}
+                  </span>
+                )}
+
+                {/* Focus Active Glow Badge */}
                 {isFocused && (
-                  <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-blue-400 shadow-glow" />
+                  <div className="absolute top-3 right-3 w-3 h-3 rounded-full bg-blue-400 ring-4 ring-blue-500/40 animate-ping" />
                 )}
               </div>
             );
@@ -887,13 +940,14 @@ export default function App() {
         </div>
       </main>
 
-      {/* App Options Modal (Long Press / Context Menu) */}
+      {/* Context Menu / App Options Modal */}
       {showOptionsModal && selectedApp && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-96 shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-neutral-800 p-1 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 bg-neutral-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-panel border border-white/15 rounded-3xl p-7 w-[420px] shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-800/90 border border-white/10 p-2 flex items-center justify-center shadow-inner">
                   {selectedApp.icon ? (
                     <img
                       src={`data:image/png;base64,${selectedApp.icon}`}
@@ -905,8 +959,8 @@ export default function App() {
                   )}
                 </div>
                 <div>
-                  <h3 className="font-bold text-white text-base">{selectedApp.name}</h3>
-                  <p className="text-xs text-neutral-400 truncate max-w-[200px]">{selectedApp.pkg}</p>
+                  <h3 className="font-extrabold text-white text-lg tracking-tight">{selectedApp.name}</h3>
+                  <p className="text-xs text-neutral-400 truncate max-w-[220px] font-mono">{selectedApp.pkg}</p>
                 </div>
               </div>
               <button
@@ -914,13 +968,14 @@ export default function App() {
                   setShowOptionsModal(false);
                   setFocusArea('grid');
                 }}
-                className="text-neutral-400 hover:text-white p-1 rounded-full"
+                className="w-8 h-8 rounded-full glass-card hover:bg-white/15 flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex flex-col gap-2">
+            {/* Modal Actions */}
+            <div className="flex flex-col gap-2.5">
               <button
                 onClick={() => {
                   setShowOptionsModal(false);
@@ -929,13 +984,13 @@ export default function App() {
                 }}
                 data-focusable="true"
                 tabIndex={0}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                className={`flex items-center gap-3.5 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 border ${
                   optionsFocusedIndex === 0
-                    ? 'bg-blue-600 text-white ring-4 ring-blue-400/60 scale-102 shadow-lg shadow-blue-500/30'
-                    : 'bg-neutral-800 text-neutral-200 hover:bg-neutral-700'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-400 ring-4 ring-blue-400/80 scale-[1.02] shadow-[0_0_20px_rgba(59,130,246,0.5)]'
+                    : 'glass-card text-neutral-200 border-white/10 hover:bg-white/10'
                 }`}
               >
-                <Play className="w-4 h-4" />
+                <Play className="w-4 h-4 text-blue-400 fill-current" />
                 <span>Open Application</span>
               </button>
 
@@ -949,14 +1004,14 @@ export default function App() {
                 }}
                 data-focusable="true"
                 tabIndex={0}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                className={`flex items-center gap-3.5 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 border ${
                   optionsFocusedIndex === 1
-                    ? 'bg-purple-600 text-white ring-4 ring-purple-400/60 scale-102 shadow-lg shadow-purple-500/30'
-                    : 'bg-neutral-800 text-neutral-200 hover:bg-neutral-700'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-400 ring-4 ring-purple-400/80 scale-[1.02] shadow-[0_0_20px_rgba(168,85,247,0.5)]'
+                    : 'glass-card text-neutral-200 border-white/10 hover:bg-white/10'
                 }`}
               >
-                <Info className="w-4 h-4" />
-                <span>App Info & Settings</span>
+                <Info className="w-4 h-4 text-purple-400" />
+                <span>App Info & Preferences</span>
               </button>
 
               <button
@@ -969,13 +1024,13 @@ export default function App() {
                 }}
                 data-focusable="true"
                 tabIndex={0}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                className={`flex items-center gap-3.5 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 border ${
                   optionsFocusedIndex === 2
-                    ? 'bg-red-600 text-white ring-4 ring-red-400/60 scale-102 shadow-lg shadow-red-500/30'
-                    : 'bg-red-950/60 text-red-300 border border-red-800/40 hover:bg-red-900/80'
+                    ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white border-red-400 ring-4 ring-red-400/80 scale-[1.02] shadow-[0_0_20px_rgba(239,68,68,0.5)]'
+                    : 'bg-red-950/40 text-red-300 border-red-800/30 hover:bg-red-900/60'
                 }`}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4 text-rose-400" />
                 <span>Uninstall Application</span>
               </button>
             </div>
@@ -992,20 +1047,20 @@ export default function App() {
               setShowSettingsModal(false);
               setFocusArea('header');
             }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
           />
 
           {/* Side Drawer Panel */}
-          <aside className="relative w-[420px] h-full bg-neutral-900/95 backdrop-blur-2xl border-l border-neutral-800/80 shadow-2xl flex flex-col p-6 z-10 animate-in slide-in-from-right duration-300">
+          <aside className="relative w-[440px] h-full glass-panel border-l border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.9)] flex flex-col p-7 z-20 animate-in slide-in-from-right duration-300">
             {/* Panel Header */}
-            <div className="flex items-center justify-between pb-5 border-b border-neutral-800/80 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-purple-400" />
+            <div className="flex items-center justify-between pb-5 border-b border-white/10 mb-5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                  <Settings className="w-5 h-5 text-purple-300" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white tracking-wide">Settings Panel</h2>
-                  <p className="text-xs text-neutral-400">Android TV Launcher Preferences</p>
+                  <h2 className="text-lg font-extrabold text-white tracking-wide">Settings Panel</h2>
+                  <p className="text-xs text-neutral-400 font-medium">Launcher & System Controls</p>
                 </div>
               </div>
               <button
@@ -1013,7 +1068,7 @@ export default function App() {
                   setShowSettingsModal(false);
                   setFocusArea('header');
                 }}
-                className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+                className="w-9 h-9 rounded-full glass-card hover:bg-white/15 flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1041,23 +1096,23 @@ export default function App() {
                     data-next-focus-down={`settings-item-${nextIndex}`}
                     data-next-focus-left="grid-container"
                     data-next-focus-right={`settings-item-${index}`}
-                    className={`group relative flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all duration-200 border ${
+                    className={`group relative flex items-center justify-between p-4.5 rounded-2xl cursor-pointer transition-all duration-300 border ${
                       isFocused
-                        ? `bg-gradient-to-r ${item.color} text-white border-white/60 ring-4 ring-purple-400/60 scale-[1.02] shadow-xl shadow-purple-500/30 z-20`
-                        : 'bg-neutral-800/70 border-neutral-700/50 text-neutral-200 hover:bg-neutral-800 hover:border-neutral-600'
+                        ? `bg-gradient-to-r ${item.color} text-white border-white/80 ring-4 ring-purple-400/80 scale-[1.03] shadow-[0_0_30px_rgba(147,51,234,0.5)] z-20`
+                        : 'glass-card border-white/10 text-neutral-200 hover:bg-white/10'
                     }`}
                   >
-                    <div className="flex items-center gap-3.5">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-                        isFocused ? 'bg-white/20 text-white' : 'bg-neutral-700/60 text-purple-400'
+                    <div className="flex items-center gap-4">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
+                        isFocused ? 'bg-white/20 text-white shadow-inner' : 'bg-white/5 border border-white/10 text-purple-400'
                       }`}>
                         <IconComponent className="w-5 h-5" />
                       </div>
                       <div className="flex flex-col">
-                        <span className={`text-sm font-bold tracking-tight ${isFocused ? 'text-white' : 'text-neutral-100'}`}>
+                        <span className={`text-sm font-extrabold tracking-tight ${isFocused ? 'text-white' : 'text-neutral-100'}`}>
                           {item.title}
                         </span>
-                        <span className={`text-xs ${isFocused ? 'text-white/80' : 'text-neutral-400'}`}>
+                        <span className={`text-xs ${isFocused ? 'text-white/80 font-medium' : 'text-neutral-400'}`}>
                           {item.subtitle}
                         </span>
                       </div>
@@ -1070,9 +1125,13 @@ export default function App() {
             </div>
 
             {/* Footer Navigation Tip */}
-            <div className="pt-4 border-t border-neutral-800/80 mt-2 flex items-center justify-between text-xs text-neutral-500 font-medium">
-              <span>Use D-Pad ▲▼ to navigate</span>
-              <span>Press OK to select</span>
+            <div className="pt-4 border-t border-white/10 mt-3 flex items-center justify-between text-xs text-neutral-400 font-semibold">
+              <span className="flex items-center gap-1">
+                <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-[10px]">▲▼</span> Navigate
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-[10px]">OK</span> Select
+              </span>
             </div>
           </aside>
         </div>
