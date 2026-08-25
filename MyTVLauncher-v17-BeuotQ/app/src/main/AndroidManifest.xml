@@ -15,6 +15,7 @@
         android:required="false" />
 
     <application
+        android:name=".MyTVApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:banner="@mipmap/ic_launcher"

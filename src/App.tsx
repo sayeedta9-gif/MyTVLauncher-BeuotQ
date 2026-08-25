@@ -95,6 +95,7 @@ const MOCK_APPS: AppItem[] = [
 export default function App() {
   const [apps, setApps] = useState<AppItem[]>([]);
   const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'search'>('home');
+  const [wallpaper, setWallpaper] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [focusArea, setFocusArea] = useState<'header' | 'grid' | 'optionsModal' | 'settingsModal'>('grid');
@@ -201,6 +202,18 @@ export default function App() {
           if (Array.isArray(notifs)) setNotifications(notifs);
         } catch (e) {}
       }
+    }
+  }, []);
+
+  // Load custom wallpaper if set via Android bridge
+  useEffect(() => {
+    if (window.AndroidBridge && typeof window.AndroidBridge.getSavedWallpaper === 'function') {
+      try {
+        const savedWp = window.AndroidBridge.getSavedWallpaper();
+        if (savedWp) {
+          setWallpaper(savedWp);
+        }
+      } catch (e) {}
     }
   }, []);
 
@@ -600,7 +613,12 @@ export default function App() {
   }, [settingsFocusedIndex, showSettingsModal, focusArea]);
 
   return (
-    <div className="relative w-screen h-screen bg-[#08090e] text-white overflow-hidden flex flex-col font-sans select-none bg-ambient-glow">
+    <div
+      className={`relative w-screen h-screen text-white overflow-hidden flex flex-col font-sans select-none ${
+        wallpaper ? 'bg-cover bg-center bg-no-repeat' : 'bg-[#08090e] bg-ambient-glow'
+      }`}
+      style={wallpaper ? { backgroundImage: `url(${wallpaper})` } : undefined}
+    >
       {/* Dynamic Ambient Background Glow Highlights */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/3 -right-32 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />

@@ -78,8 +78,29 @@ private BroadcastReceiver refreshReceiver;
                 checkAndAskNotificationAccess();
             }
 
+            // Immediately set fallback wallpaper background on Window so user sees wallpaper right away on boot
+            Drawable fallback = WallpaperManager.getDefaultFallbackDrawable(this);
+            if (fallback != null) {
+                getWindow().setBackgroundDrawable(fallback);
+            }
+
+            // Asynchronously load and apply custom or preloaded wallpaper
+            WallpaperManager.getWallpaperDrawableAsync(this, new WallpaperManager.WallpaperCallback() {
+                @Override
+                public void onWallpaperLoaded(final Drawable drawable) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (drawable != null) {
+                                getWindow().setBackgroundDrawable(drawable);
+                            }
+                        }
+                    });
+                }
+            });
+
             webView = new WebView(this);
-            webView.setBackgroundColor(0xFF000000);
+            webView.setBackgroundColor(0x00000000); // Transparent so window background shows through instantly
             webView.setFocusable(true);
             webView.setFocusableInTouchMode(true);
             setContentView(webView);
@@ -472,16 +493,14 @@ private BroadcastReceiver refreshReceiver;
         @JavascriptInterface
         public void saveWallpaper(String dataUrl) {
             try {
-                SharedPreferences prefs = getSharedPreferences("launcher_prefs", MODE_PRIVATE);
-                prefs.edit().putString("wallpaper", dataUrl).apply();
+                WallpaperManager.saveWallpaper(MainActivity.this, dataUrl);
             } catch (Exception e) {}
         }
 
         @JavascriptInterface
         public String getSavedWallpaper() {
             try {
-                SharedPreferences prefs = getSharedPreferences("launcher_prefs", MODE_PRIVATE);
-                return prefs.getString("wallpaper", "");
+                return WallpaperManager.getSavedWallpaper(MainActivity.this);
             } catch (Exception e) { return ""; }
         }
 
