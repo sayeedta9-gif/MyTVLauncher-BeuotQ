@@ -30,6 +30,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -54,14 +55,28 @@ private BroadcastReceiver refreshReceiver;
 
             // طلب الأذونات
             if (Build.VERSION.SDK_INT >= 23) {
-                requestPermissions(new String[]{
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                }, PERM_REQUEST);
+                List<String> neededPerms = new ArrayList<>();
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    neededPerms.add(Manifest.permission.RECORD_AUDIO);
+                }
+                if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    neededPerms.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+                }
+                if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    neededPerms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                }
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                    neededPerms.add("android.permission.POST_NOTIFICATIONS");
+                }
+
+                if (!neededPerms.isEmpty()) {
+                    requestPermissions(neededPerms.toArray(new String[0]), PERM_REQUEST);
+                } else {
+                    checkAndAskNotificationAccess();
+                }
+            } else {
+                checkAndAskNotificationAccess();
             }
-            // طلب صلاحية الإشعارات مباشرة إذا لم تُمنح بعد
-            checkAndAskNotificationAccess();
 
             webView = new WebView(this);
             webView.setBackgroundColor(0xFF000000);
@@ -129,36 +144,50 @@ private BroadcastReceiver refreshReceiver;
         }
     }
 
-    private void checkAndAskNotificationAccess() {
+    private boolean hasPromptedNotificationAccess = false;
+
+    private boolean isNotificationListenerGranted() {
         try {
             String flat = android.provider.Settings.Secure.getString(
                 getContentResolver(), "enabled_notification_listeners");
-            boolean hasAccess = flat != null && flat.contains(getPackageName());
-            if (!hasAccess) {
-                // افتح شاشة صلاحيات الإشعارات مباشرة
-                android.app.AlertDialog.Builder builder =
-                    new android.app.AlertDialog.Builder(this);
-                builder.setTitle("صلاحية الوصول للإشعارات");
-                builder.setMessage("لعرض إشعارات التطبيقات في اللانشر، يلزم منح إذن الوصول للإشعارات.");
-                builder.setPositiveButton("منح الإذن", new android.content.DialogInterface.OnClickListener() {
-                    public void onClick(android.content.DialogInterface dialog, int which) {
-                        try {
-                            Intent i = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
-                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(i);
-                        } catch (Exception e) {}
-                    }
-                });
-                builder.setNegativeButton("تخطي", null);
-                builder.setCancelable(true);
-                // تأخير 2 ثانية حتى تنتهي شاشة الصلاحيات الأخرى
-                final android.app.AlertDialog dialog = builder.create();
-                new android.os.Handler().postDelayed(new Runnable() {
-                    public void run() {
-                        try { dialog.show(); } catch (Exception e) {}
-                    }
-                }, 2000);
-            }
+            return flat != null && flat.contains(getPackageName());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void checkAndAskNotificationAccess() {
+        if (isNotificationListenerGranted() || hasPromptedNotificationAccess) {
+            return;
+        }
+        hasPromptedNotificationAccess = true;
+
+        try {
+            android.app.AlertDialog.Builder builder =
+                new android.app.AlertDialog.Builder(this);
+            builder.setTitle("صلاحية الوصول للإشعارات");
+            builder.setMessage("لعرض إشعارات التطبيقات في اللانشر، يلزم منح إذن الوصول للإشعارات.");
+            builder.setPositiveButton("منح الإذن", new android.content.DialogInterface.OnClickListener() {
+                public void onClick(android.content.DialogInterface dialog, int which) {
+                    try {
+                        Intent i = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(i);
+                    } catch (Exception e) {}
+                }
+            });
+            builder.setNegativeButton("تخطي", null);
+            builder.setCancelable(true);
+            final android.app.AlertDialog dialog = builder.create();
+            new android.os.Handler().postDelayed(new Runnable() {
+                public void run() {
+                    try {
+                        if (!isFinishing() && !isNotificationListenerGranted()) {
+                            dialog.show();
+                        }
+                    } catch (Exception e) {}
+                }
+            }, 1000);
         } catch (Exception e) {}
     }
 
@@ -460,15 +489,12 @@ if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
 
         @JavascriptInterface
         public boolean hasNotificationAccess() {
-            try {
-                String flat = android.provider.Settings.Secure.getString(
-                    getContentResolver(), "enabled_notification_listeners");
-                return flat != null && flat.contains(getPackageName());
-            } catch(Exception e) { return false; }
+            return isNotificationListenerGranted();
         }
 
         @JavascriptInterface
         public void requestNotificationAccess() {
+            if (isNotificationListenerGranted()) return;
             try {
                 android.content.Intent i = new android.content.Intent(
                     "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
@@ -541,9 +567,7 @@ if (refreshReceiver == null) {
 
     private void checkNotifAccess() {
         try {
-            String flat = android.provider.Settings.Secure.getString(
-                getContentResolver(), "enabled_notification_listeners");
-            if (flat == null || !flat.contains(getPackageName())) {
+            if (!isNotificationListenerGranted() && !hasPromptedNotificationAccess) {
                 if (webView != null) {
                     webView.post(new Runnable() { public void run() {
                         webView.evaluateJavascript(
