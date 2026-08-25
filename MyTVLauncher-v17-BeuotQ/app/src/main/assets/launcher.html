@@ -1,17 +1,517 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Android TV Launcher</title>
-    <meta name="description" content="Modern Android TV Launcher UI" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="assets/index-D7RY2KBp.js"></script>
-    <link rel="stylesheet" crossorigin href="assets/index-C6dgU4by.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My TV Launcher</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background-color: #0d0d0d;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      background: radial-gradient(circle at top right, #1a1e29 0%, #0d0d0d 70%);
+    }
+    /* Top Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      background: rgba(20, 20, 20, 0.6);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 10;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .g-blue { color: #4285F4; }
+    .g-red { color: #EA4335; }
+    .g-yellow { color: #FBBC05; }
+    .g-green { color: #34A853; }
+    .logo-tv {
+      color: #e0e0e0;
+      font-weight: 500;
+      font-size: 22px;
+      margin-left: 4px;
+    }
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-right: 16px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #a0a0a0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-item.active {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+    .nav-item.focused {
+      background: #ffffff;
+      color: #0d0d0d;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+      transform: scale(1.05);
+    }
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .icon-btn.focused {
+      background: #4285F4;
+      box-shadow: 0 0 15px rgba(66, 133, 244, 0.6);
+      transform: scale(1.15);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .status-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cccccc;
+      font-size: 12px;
+    }
+    .clock {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e0e0e0;
+      letter-spacing: 1px;
+    }
+
+    /* Main Apps Section */
+    main {
+      flex: 1;
+      padding: 30px 40px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #e0e0e0;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 24px;
+      overflow-y: auto;
+      padding: 10px 4px 30px 4px;
+      flex: 1;
+    }
+    .apps-grid::-webkit-scrollbar {
+      display: none;
+    }
+    .app-card {
+      position: relative;
+      background: rgba(30, 30, 30, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .app-card.focused {
+      background: rgba(45, 55, 72, 0.9);
+      border-color: #4285F4;
+      box-shadow: 0 0 20px rgba(66, 133, 244, 0.5);
+      transform: scale(1.06);
+      z-index: 2;
+    }
+    .app-icon {
+      width: 72px;
+      height: 72px;
+      margin-bottom: 12px;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+    .app-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #dddddd;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+    .app-card.focused .app-title {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal-box {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 16px;
+      width: 380px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-header {
+      font-size: 18px;
+      font-weight: bold;
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+    .modal-btn {
+      padding: 12px;
+      border-radius: 10px;
+      background: #2a2a2a;
+      color: #fff;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: right;
+      cursor: pointer;
+    }
+    .modal-btn.danger {
+      background: #4a1515;
+      color: #ff9999;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header>
+      <div class="header-left">
+        <!-- Clean Google TV branding without empty top-left icon -->
+        <div class="logo-container">
+          <span class="g-blue">G</span><span class="g-red">o</span><span class="g-yellow">o</span><span class="g-blue">g</span><span class="g-green">l</span><span class="g-red">e</span>
+          <span class="logo-tv">tv</span>
+        </div>
+
+        <nav>
+          <!-- Mic Voice Search -->
+          <button id="micBtn" class="icon-btn" onclick="triggerVoiceSearch()">
+            🎤
+          </button>
+          <!-- Home Tab -->
+          <button id="tabHome" class="nav-item active" onclick="switchTab('home')">
+            🏠 الرئيسية
+          </button>
+          <!-- Apps Tab -->
+          <button id="tabApps" class="nav-item" onclick="switchTab('apps')">
+            📱 التطبيقات
+          </button>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <button class="status-btn" onclick="boostRam()">
+          ⚡ <span id="memText">RAM</span>
+        </button>
+        <button id="settingsBtn" class="icon-btn" onclick="openSettings()">
+          ⚙️
+        </button>
+        <div id="clockText" class="clock">12:00</div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+      <div class="section-title">
+        <span>📱</span> <span id="sectionTitle">كل التطبيقات</span>
+      </div>
+
+      <div id="appsGrid" class="apps-grid">
+        <!-- Apps dynamically populated -->
+      </div>
+    </main>
+
+    <!-- Options Modal -->
+    <div id="optionsModal" class="modal-overlay">
+      <div class="modal-box">
+        <div id="modalAppName" class="modal-header">اسم التطبيق</div>
+        <button class="modal-btn" onclick="launchSelectedApp()">تشغيل التطبيق</button>
+        <button class="modal-btn" onclick="openAppDetails()">إعدادات التطبيق</button>
+        <button class="modal-btn danger" onclick="uninstallSelectedApp()">إلغاء التثبيت</button>
+        <button class="modal-btn" onclick="closeModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let appsList = [];
+    let focusArea = 'grid'; // 'header' or 'grid'
+    let focusedHeaderIdx = 1; // 0: mic, 1: home, 2: apps, 3: settings
+    let focusedGridIdx = 0;
+    let selectedApp = null;
+    const COLS = 5;
+
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('clockText').innerText = `${hours}:${mins}`;
+    }
+    setInterval(updateClock, 10000);
+    updateClock();
+
+    function loadApps() {
+      if (window.AndroidBridge && typeof window.AndroidBridge.getInstalledApps === 'function') {
+        try {
+          const raw = window.AndroidBridge.getInstalledApps();
+          appsList = JSON.parse(raw);
+        } catch (e) { appsList = []; }
+      }
+      if (!appsList || appsList.length === 0) {
+        appsList = [
+          { pkg: 'com.google.android.youtube.tv', name: 'YouTube' },
+          { pkg: 'com.netflix.ninja', name: 'Netflix' },
+          { pkg: 'com.primevideo.android', name: 'Prime Video' },
+          { pkg: 'com.disney.disneyplus', name: 'Disney+' },
+          { pkg: 'com.spotify.tv.android', name: 'Spotify' },
+          { pkg: 'com.plexapp.android', name: 'Plex' },
+          { pkg: 'com.vlc.tv', name: 'VLC' },
+          { pkg: 'com.google.android.tv.settings', name: 'Settings' }
+        ];
+      }
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('appsGrid');
+      grid.innerHTML = '';
+      appsList.forEach((app, idx) => {
+        const card = document.createElement('div');
+        card.className = 'app-card' + (focusArea === 'grid' && focusedGridIdx === idx ? ' focused' : '');
+        card.onclick = () => { launchApp(app); };
+
+        let iconSrc = app.icon ? ('data:image/png;base64,' + app.icon) : '';
+        card.innerHTML = `
+          ${iconSrc ? `<img class="app-icon" src="${iconSrc}" />` : `<div class="app-icon" style="background:#333;display:flex;align-items:center;justify-content:center;">📺</div>`}
+          <div class="app-title">${app.name}</div>
+        `;
+        grid.appendChild(card);
+      });
+      updateFocusVisuals();
+    }
+
+    function updateFocusVisuals() {
+      // Header items
+      const mic = document.getElementById('micBtn');
+      const home = document.getElementById('tabHome');
+      const apps = document.getElementById('tabApps');
+      const settings = document.getElementById('settingsBtn');
+
+      [mic, home, apps, settings].forEach(el => el.classList.remove('focused'));
+
+      if (focusArea === 'header') {
+        if (focusedHeaderIdx === 0) mic.classList.add('focused');
+        else if (focusedHeaderIdx === 1) home.classList.add('focused');
+        else if (focusedHeaderIdx === 2) apps.classList.add('focused');
+        else if (focusedHeaderIdx === 3) settings.classList.add('focused');
+      }
+
+      // Grid items
+      const cards = document.querySelectorAll('.app-card');
+      cards.forEach((card, idx) => {
+        if (focusArea === 'grid' && focusedGridIdx === idx) {
+          card.classList.add('focused');
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          card.classList.remove('focused');
+        }
+      });
+    }
+
+    function tvKey(key) {
+      if (focusArea === 'header') {
+        if (key === 'RIGHT') {
+          focusedHeaderIdx = Math.min(focusedHeaderIdx + 1, 3);
+        } else if (key === 'LEFT') {
+          focusedHeaderIdx = Math.max(focusedHeaderIdx - 1, 0);
+        } else if (key === 'DOWN') {
+          if (appsList.length > 0) {
+            focusArea = 'grid';
+            focusedGridIdx = 0;
+          }
+        } else if (key === 'OK') {
+          if (focusedHeaderIdx === 0) triggerVoiceSearch();
+          else if (focusedHeaderIdx === 1) switchTab('home');
+          else if (focusedHeaderIdx === 2) switchTab('apps');
+          else if (focusedHeaderIdx === 3) openSettings();
+        }
+      } else if (focusArea === 'grid') {
+        const total = appsList.length;
+        if (key === 'RIGHT') {
+          if ((focusedGridIdx + 1) % COLS !== 0 && focusedGridIdx + 1 < total) {
+            focusedGridIdx++;
+          }
+        } else if (key === 'LEFT') {
+          if (focusedGridIdx % COLS !== 0) {
+            focusedGridIdx = Math.max(focusedGridIdx - 1, 0);
+          }
+        } else if (key === 'DOWN') {
+          if (focusedGridIdx + COLS < total) {
+            focusedGridIdx += COLS;
+          }
+        } else if (key === 'UP') {
+          if (focusedGridIdx - COLS >= 0) {
+            focusedGridIdx -= COLS;
+          } else {
+            focusArea = 'header';
+          }
+        } else if (key === 'OK') {
+          if (appsList[focusedGridIdx]) {
+            launchApp(appsList[focusedGridIdx]);
+          }
+        } else if (key === 'OK_LONG') {
+          if (appsList[focusedGridIdx]) {
+            selectedApp = appsList[focusedGridIdx];
+            openModal();
+          }
+        } else if (key === 'BACK') {
+          focusArea = 'header';
+        }
+      }
+      updateFocusVisuals();
+    }
+
+    function launchApp(app) {
+      if (window.AndroidBridge && typeof window.AndroidBridge.openApp === 'function') {
+        window.AndroidBridge.openApp(app.pkg);
+      }
+    }
+
+    function triggerVoiceSearch() {
+      if (window.AndroidBridge && typeof window.AndroidBridge.startVoiceSearch === 'function') {
+        window.AndroidBridge.startVoiceSearch();
+      }
+    }
+
+    function openSettings() {
+      if (window.AndroidBridge && typeof window.AndroidBridge.openSystemSettings === 'function') {
+        window.AndroidBridge.openSystemSettings();
+      }
+    }
+
+    function boostRam() {
+      if (window.AndroidBridge && typeof window.AndroidBridge.boostDevice === 'function') {
+        const freed = window.AndroidBridge.boostDevice();
+        document.getElementById('memText').innerText = freed + ' MB';
+      }
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tabHome').classList.toggle('active', tab === 'home');
+      document.getElementById('tabApps').classList.toggle('active', tab === 'apps');
+    }
+
+    function openModal() {
+      if (!selectedApp) return;
+      document.getElementById('modalAppName').innerText = selectedApp.name;
+      document.getElementById('optionsModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('optionsModal').classList.remove('open');
+    }
+
+    function launchSelectedApp() {
+      closeModal();
+      if (selectedApp) launchApp(selectedApp);
+    }
+
+    function openAppDetails() {
+      closeModal();
+      if (selectedApp && window.AndroidBridge?.openSystemApp) {
+        window.AndroidBridge.openSystemApp(selectedApp.pkg);
+      }
+    }
+
+    function uninstallSelectedApp() {
+      closeModal();
+      if (selectedApp && window.AndroidBridge?.uninstallApp) {
+        window.AndroidBridge.uninstallApp(selectedApp.pkg);
+      }
+    }
+
+    window.onload = () => {
+      loadApps();
+    };
+  </script>
+</body>
 </html>
