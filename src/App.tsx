@@ -110,6 +110,40 @@ export default function App() {
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const settingsPanelRef = useRef<HTMLDivElement>(null);
 
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPressRef = useRef<boolean>(false);
+
+  const handleTouchOrMouseDown = useCallback((app: AppItem, index: number) => {
+    isLongPressRef.current = false;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      setFocusArea('grid');
+      setFocusedIndex(index);
+      setSelectedApp(app);
+      setOptionsFocusedIndex(0);
+      setShowOptionsModal(true);
+      setFocusArea('optionsModal');
+    }, 500);
+  }, []);
+
+  const handleTouchOrMouseUp = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleAppClick = useCallback((app: AppItem, index: number) => {
+    if (isLongPressRef.current) {
+      isLongPressRef.current = false;
+      return;
+    }
+    setFocusArea('grid');
+    setFocusedIndex(index);
+    launchApp(app);
+  }, []);
+
   // Clock updating
   useEffect(() => {
     const updateTime = () => {
@@ -793,13 +827,16 @@ export default function App() {
             return (
               <div
                 key={app.pkg + index}
-                onClick={() => {
-                  setFocusArea('grid');
-                  setFocusedIndex(index);
-                  launchApp(app);
-                }}
+                onClick={() => handleAppClick(app, index)}
+                onMouseDown={() => handleTouchOrMouseDown(app, index)}
+                onMouseUp={handleTouchOrMouseUp}
+                onMouseLeave={handleTouchOrMouseUp}
+                onTouchStart={() => handleTouchOrMouseDown(app, index)}
+                onTouchEnd={handleTouchOrMouseUp}
                 onContextMenu={(e) => {
                   e.preventDefault();
+                  handleTouchOrMouseUp();
+                  isLongPressRef.current = true;
                   setFocusArea('grid');
                   setFocusedIndex(index);
                   setSelectedApp(app);
