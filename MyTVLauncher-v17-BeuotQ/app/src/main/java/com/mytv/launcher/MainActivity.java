@@ -78,8 +78,29 @@ private BroadcastReceiver refreshReceiver;
                 checkAndAskNotificationAccess();
             }
 
+            // Immediately set fallback wallpaper background on Window so user sees wallpaper right away on boot
+            Drawable fallback = WallpaperManager.getDefaultFallbackDrawable(this);
+            if (fallback != null) {
+                getWindow().setBackgroundDrawable(fallback);
+            }
+
+            // Asynchronously load and apply custom or preloaded wallpaper
+            WallpaperManager.getWallpaperDrawableAsync(this, new WallpaperManager.WallpaperCallback() {
+                @Override
+                public void onWallpaperLoaded(final Drawable drawable) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (drawable != null) {
+                                getWindow().setBackgroundDrawable(drawable);
+                            }
+                        }
+                    });
+                }
+            });
+
             webView = new WebView(this);
-            webView.setBackgroundColor(0xFF000000);
+            webView.setBackgroundColor(0x00000000); // Transparent so window background shows through instantly
             webView.setFocusable(true);
             webView.setFocusableInTouchMode(true);
             setContentView(webView);
@@ -230,34 +251,56 @@ private BroadcastReceiver refreshReceiver;
         }
     }
 
+    private boolean isLongPressHandled = false;
+
     // ══ الريموت — كل الأزرار ══
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (webView == null) return super.dispatchKeyEvent(event);
-int action = event.getAction();
-boolean isLongPress = event.isLongPress();
+        int action = event.getAction();
+        int keyCode = event.getKeyCode();
 
-if (action == KeyEvent.ACTION_DOWN && isLongPress) {
-    int kc = event.getKeyCode();
-    if (kc == KeyEvent.KEYCODE_DPAD_CENTER ||
-        kc == KeyEvent.KEYCODE_ENTER ||
-        kc == KeyEvent.KEYCODE_NUMPAD_ENTER ||
-        kc == KeyEvent.KEYCODE_BUTTON_A) {
-        final String ljs = "tvKey('OK_LONG')";
-        webView.post(new Runnable() {
-            public void run() {
-                webView.evaluateJavascript(
-                    "(function(){if(typeof tvKey==='function'){" + ljs + "}})()", null);
+        boolean isSelectKey = (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                               keyCode == KeyEvent.KEYCODE_ENTER ||
+                               keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                               keyCode == KeyEvent.KEYCODE_BUTTON_A);
+
+        if (isSelectKey) {
+            if (action == KeyEvent.ACTION_DOWN) {
+                if (event.isLongPress()) {
+                    isLongPressHandled = true;
+                    webView.post(new Runnable() {
+                        public void run() {
+                            webView.evaluateJavascript(
+                                "(function(){if(typeof tvKey==='function'){tvKey('OK_LONG');}})()", null);
+                        }
+                    });
+                    return true;
+                }
+                if (event.getRepeatCount() == 0) {
+                    isLongPressHandled = false;
+                    event.startTracking();
+                }
+                return true;
+            } else if (action == KeyEvent.ACTION_UP) {
+                if (isLongPressHandled) {
+                    isLongPressHandled = false;
+                    return true;
+                }
+                webView.post(new Runnable() {
+                    public void run() {
+                        webView.evaluateJavascript(
+                            "(function(){if(typeof tvKey==='function'){tvKey('OK');}})()", null);
+                    }
+                });
+                return true;
             }
-        });
-        return true;
-    }
-}
+        }
 
-if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
+        if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
 
         final String js;
-        switch (event.getKeyCode()) {
+        switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
             case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP:    js="tvKey('UP')"; break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
@@ -266,10 +309,6 @@ if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
             case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT:  js="tvKey('LEFT')"; break;
             case KeyEvent.KEYCODE_DPAD_RIGHT:
             case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT: js="tvKey('RIGHT')"; break;
-            case KeyEvent.KEYCODE_DPAD_CENTER:
-            case KeyEvent.KEYCODE_ENTER:
-            case KeyEvent.KEYCODE_NUMPAD_ENTER:
-            case KeyEvent.KEYCODE_BUTTON_A:                js="tvKey('OK')"; break;
             case KeyEvent.KEYCODE_BACK:
             case KeyEvent.KEYCODE_ESCAPE:                  js="tvKey('BACK')"; break;
             case KeyEvent.KEYCODE_MENU:                    js="openAllSettings()"; break;
@@ -284,6 +323,27 @@ if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
             }
         });
         return true;
+    }
+
+    @Override
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+        boolean isSelectKey = (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                               keyCode == KeyEvent.KEYCODE_ENTER ||
+                               keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+                               keyCode == KeyEvent.KEYCODE_BUTTON_A);
+        if (isSelectKey) {
+            isLongPressHandled = true;
+            if (webView != null) {
+                webView.post(new Runnable() {
+                    public void run() {
+                        webView.evaluateJavascript(
+                            "(function(){if(typeof tvKey==='function'){tvKey('OK_LONG');}})()", null);
+                    }
+                });
+            }
+            return true;
+        }
+        return super.onKeyLongPress(keyCode, event);
     }
 
     @Override public void onBackPressed() {}
@@ -391,6 +451,25 @@ if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
 }
 
         @JavascriptInterface
+        public void openSmartBoxSettings() {
+            try {
+                PackageManager pm = getPackageManager();
+                Intent intent = pm.getLaunchIntentForPackage("com.droidlogic.mboxsettings");
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } else {
+                    openSystemSettings();
+                }
+            } catch (android.content.ActivityNotFoundException e) {
+                Log.e("TV", "SmartBox settings ActivityNotFoundException: " + e.getMessage());
+                openSystemSettings();
+            } catch (Exception e) {
+                Log.e("TV", "SmartBox settings exception: " + e.getMessage());
+            }
+        }
+
+        @JavascriptInterface
         public void openSystemSettings() {
             try { startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS)); } catch (Exception e) {}
         }
@@ -414,16 +493,14 @@ if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
         @JavascriptInterface
         public void saveWallpaper(String dataUrl) {
             try {
-                SharedPreferences prefs = getSharedPreferences("launcher_prefs", MODE_PRIVATE);
-                prefs.edit().putString("wallpaper", dataUrl).apply();
+                WallpaperManager.saveWallpaper(MainActivity.this, dataUrl);
             } catch (Exception e) {}
         }
 
         @JavascriptInterface
         public String getSavedWallpaper() {
             try {
-                SharedPreferences prefs = getSharedPreferences("launcher_prefs", MODE_PRIVATE);
-                return prefs.getString("wallpaper", "");
+                return WallpaperManager.getSavedWallpaper(MainActivity.this);
             } catch (Exception e) { return ""; }
         }
 
