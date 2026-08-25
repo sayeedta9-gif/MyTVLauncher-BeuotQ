@@ -89,7 +89,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [focusArea, setFocusArea] = useState<'header' | 'grid' | 'optionsModal' | 'settingsModal'>('grid');
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
-  const [focusedHeaderItem, setFocusedHeaderItem] = useState<number>(1); // 0: voice, 1: home, 2: apps, 3: settings
+  const [focusedHeaderItem, setFocusedHeaderItem] = useState<number>(1); // 0: voice, 1: home, 2: apps, 3: optimizer, 4: wifi, 5: notifications, 6: fileManager, 7: settings
   const [selectedApp, setSelectedApp] = useState<AppItem | null>(null);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -227,8 +227,9 @@ export default function App() {
       }
 
       if (focusArea === 'header') {
+        const MAX_HEADER_ITEM = 7;
         if (key === 'RIGHT') {
-          setFocusedHeaderItem((prev) => Math.min(prev + 1, 3));
+          setFocusedHeaderItem((prev) => Math.min(prev + 1, MAX_HEADER_ITEM));
         } else if (key === 'LEFT') {
           setFocusedHeaderItem((prev) => Math.max(prev - 1, 0));
         } else if (key === 'DOWN') {
@@ -237,19 +238,43 @@ export default function App() {
             setFocusedIndex(0);
           }
         } else if (key === 'OK') {
-          if (focusedHeaderItem === 0) {
-            // Voice Search
-            if (window.AndroidBridge && typeof window.AndroidBridge.startVoiceSearch === 'function') {
-              window.AndroidBridge.startVoiceSearch();
-            }
-          } else if (focusedHeaderItem === 1) {
-            setActiveTab('home');
-            setSearchQuery('');
-          } else if (focusedHeaderItem === 2) {
-            setActiveTab('apps');
-            setSearchQuery('');
-          } else if (focusedHeaderItem === 3) {
-            setShowSettingsModal(true);
+          switch (focusedHeaderItem) {
+            case 0:
+              if (window.AndroidBridge && typeof window.AndroidBridge.startVoiceSearch === 'function') {
+                window.AndroidBridge.startVoiceSearch();
+              }
+              break;
+            case 1:
+              setActiveTab('home');
+              setSearchQuery('');
+              break;
+            case 2:
+              setActiveTab('apps');
+              setSearchQuery('');
+              break;
+            case 3:
+              handleBoost();
+              break;
+            case 4:
+              if (window.AndroidBridge && typeof window.AndroidBridge.openSystemSettings === 'function') {
+                window.AndroidBridge.openSystemSettings();
+              }
+              break;
+            case 5:
+              if (window.AndroidBridge && typeof window.AndroidBridge.requestNotificationAccess === 'function') {
+                window.AndroidBridge.requestNotificationAccess();
+              }
+              break;
+            case 6:
+              if (window.AndroidBridge && typeof window.AndroidBridge.openSystemApp === 'function') {
+                window.AndroidBridge.openSystemApp('com.android.documentsui');
+              } else {
+                alert('Opening File Manager');
+              }
+              break;
+            case 7:
+              setShowSettingsModal(true);
+              break;
           }
         } else if (key === 'BACK') {
           if (activeTab !== 'home') {
@@ -377,9 +402,9 @@ export default function App() {
             </span>
           </div>
 
-          {/* Navigation Tabs */}
+        {/* Navigation Tabs & Voice Search */}
           <nav className="flex items-center gap-3 ml-4">
-            {/* Voice Search Button */}
+          {/* Google TV Style High-Res Voice Search Button */}
             <button
               id="micBtn"
               onClick={() => {
@@ -389,13 +414,16 @@ export default function App() {
                   window.AndroidBridge.startVoiceSearch();
                 }
               }}
-              className={`p-2.5 rounded-full transition-all duration-200 ${
+            title="Voice Search"
+            className={`relative group flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
                 focusArea === 'header' && focusedHeaderItem === 0
-                  ? 'bg-blue-600 text-white ring-4 ring-blue-400/50 scale-110 shadow-lg shadow-blue-500/30'
-                  : 'bg-neutral-800/80 text-neutral-300 hover:bg-neutral-700'
+                ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white border-blue-400 ring-4 ring-blue-400/60 scale-110 shadow-lg shadow-blue-500/40'
+                : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80 hover:border-neutral-600'
               }`}
             >
-              <Mic className="w-5 h-5" />
+            {/* Google Brand Color Dots Ring Accent */}
+            <div className="absolute inset-0 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-red-500 to-yellow-500 opacity-30 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            <Mic className={`w-5 h-5 relative z-10 ${focusArea === 'header' && focusedHeaderItem === 0 ? 'text-white animate-pulse' : 'text-blue-400'}`} />
             </button>
 
             {/* Home Tab */}
@@ -442,41 +470,110 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Right Side: Status Indicators & Time */}
-        <div className="flex items-center gap-5">
-          {/* Memory / Boost Button */}
+      {/* Right Side: Standardized Circular Action Icons & Time */}
+      <div className="flex items-center gap-3">
+        {/* 1. Device Optimizer Icon */}
           <button
-            onClick={handleBoost}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/60 hover:bg-neutral-700/80 text-xs text-neutral-300 border border-neutral-700/50"
-            title="Clean RAM"
+          onClick={() => {
+            setFocusArea('header');
+            setFocusedHeaderItem(3);
+            handleBoost();
+          }}
+          title="Device Optimizer"
+          className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            focusArea === 'header' && focusedHeaderItem === 3
+              ? 'bg-blue-600 text-white border-blue-400 ring-4 ring-blue-400/60 scale-110 shadow-lg shadow-blue-500/40'
+              : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+          }`}
           >
-            <Cpu className="w-3.5 h-3.5 text-blue-400" />
-            <span>{memInfo.avail ? `${memInfo.avail}MB` : 'Boost'}</span>
+          <Cpu className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 3 ? 'text-white' : 'text-blue-400'}`} />
           </button>
 
-          {/* Wi-Fi Icon */}
-          <div className="text-neutral-400">
-            {isWifi ? <Wifi className="w-4 h-4 text-green-400" /> : <WifiOff className="w-4 h-4 text-red-400" />}
-          </div>
+        {/* 2. Wi-Fi Icon */}
+        <button
+          onClick={() => {
+            setFocusArea('header');
+            setFocusedHeaderItem(4);
+            if (window.AndroidBridge?.openSystemSettings) {
+              window.AndroidBridge.openSystemSettings();
+            }
+          }}
+          title={isWifi ? 'Wi-Fi Connected' : 'Wi-Fi Disconnected'}
+          className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            focusArea === 'header' && focusedHeaderItem === 4
+              ? 'bg-emerald-600 text-white border-emerald-400 ring-4 ring-emerald-400/60 scale-110 shadow-lg shadow-emerald-500/40'
+              : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+          }`}
+        >
+          {isWifi ? (
+            <Wifi className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 4 ? 'text-white' : 'text-emerald-400'}`} />
+          ) : (
+            <WifiOff className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 4 ? 'text-white' : 'text-rose-400'}`} />
+          )}
+        </button>
+
+        {/* 3. Notifications Icon */}
+        <button
+          onClick={() => {
+            setFocusArea('header');
+            setFocusedHeaderItem(5);
+            if (window.AndroidBridge?.requestNotificationAccess) {
+              window.AndroidBridge.requestNotificationAccess();
+            }
+          }}
+          title="Notifications"
+          className={`relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            focusArea === 'header' && focusedHeaderItem === 5
+              ? 'bg-amber-600 text-white border-amber-400 ring-4 ring-amber-400/60 scale-110 shadow-lg shadow-amber-500/40'
+              : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+          }`}
+        >
+          <Bell className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 5 ? 'text-white' : 'text-amber-400'}`} />
+          {notifications.length > 0 && (
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-neutral-900" />
+          )}
+        </button>
+
+        {/* 4. File Manager Icon */}
+        <button
+          onClick={() => {
+            setFocusArea('header');
+            setFocusedHeaderItem(6);
+            if (window.AndroidBridge?.openSystemApp) {
+              window.AndroidBridge.openSystemApp('com.android.documentsui');
+            } else {
+              alert('Opening File Manager');
+            }
+          }}
+          title="File Manager"
+          className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            focusArea === 'header' && focusedHeaderItem === 6
+              ? 'bg-indigo-600 text-white border-indigo-400 ring-4 ring-indigo-400/60 scale-110 shadow-lg shadow-indigo-500/40'
+              : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
+          }`}
+        >
+          <Folder className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 6 ? 'text-white' : 'text-indigo-400'}`} />
+        </button>
 
           {/* Settings Button */}
           <button
             onClick={() => {
               setFocusArea('header');
-              setFocusedHeaderItem(3);
+            setFocusedHeaderItem(7);
               setShowSettingsModal(true);
             }}
-            className={`p-2 rounded-full transition-all duration-200 ${
-              focusArea === 'header' && focusedHeaderItem === 3
-                ? 'bg-white text-neutral-900 ring-4 ring-white/40 scale-110'
-                : 'text-neutral-400 hover:text-white bg-neutral-800/50'
+          title="Settings"
+          className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 border ${
+            focusArea === 'header' && focusedHeaderItem === 7
+              ? 'bg-purple-600 text-white border-purple-400 ring-4 ring-purple-400/60 scale-110 shadow-lg shadow-purple-500/40'
+              : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-200 hover:bg-neutral-700/80'
             }`}
           >
-            <Settings className="w-5 h-5" />
+          <Settings className={`w-5 h-5 ${focusArea === 'header' && focusedHeaderItem === 7 ? 'text-white' : 'text-purple-400'}`} />
           </button>
 
           {/* Clock */}
-          <div className="text-lg font-medium text-neutral-200 tracking-wider">
+        <div className="ml-2 text-lg font-medium text-neutral-200 tracking-wider">
             {currentTime || '12:00 PM'}
           </div>
         </div>
