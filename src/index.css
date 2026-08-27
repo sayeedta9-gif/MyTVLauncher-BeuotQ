@@ -24,9 +24,9 @@ button:focus-visible { outline: 3px solid rgba(255,255,255,.92); outline-offset:
     linear-gradient(120deg, #24232e 0%, #292134 47%, #35142e 100%);
 }
 
-.ambient { position: absolute; z-index: -3; border-radius: 50%; filter: blur(44px); opacity: .63; pointer-events: none; }
-.ambient-violet { width: 45vw; height: 64vh; right: -14vw; top: -21vh; background: #70295d; }
-.ambient-cyan { width: 38vw; height: 40vh; left: 12vw; bottom: -31vh; background: #0a5264; opacity: .3; }
+.ambient { position: absolute; z-index: -3; border-radius: 50%; opacity: .63; pointer-events: none; }
+.ambient-violet { width: 45vw; height: 64vh; right: -14vw; top: -21vh; background: radial-gradient(circle, rgba(112,41,93,.9) 0%, rgba(112,41,93,.52) 42%, rgba(112,41,93,0) 72%); }
+.ambient-cyan { width: 38vw; height: 40vh; left: 12vw; bottom: -31vh; background: radial-gradient(circle, rgba(10,82,100,.85) 0%, rgba(10,82,100,.42) 44%, rgba(10,82,100,0) 74%); opacity: .3; }
 .dark-vignette { position: absolute; z-index: -2; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 45%, rgba(4, 4, 9, .31) 100%); }
 
 .launcher-header {
@@ -58,7 +58,7 @@ button:focus-visible { outline: 3px solid rgba(255,255,255,.92); outline-offset:
   color: rgba(244,241,247,.66);
   transition: transform .17s ease, background .17s ease, box-shadow .17s ease, color .17s ease;
 }
-.search-pill svg { width: clamp(22px, 2.35vw, 31px); height: clamp(22px, 2.35vw, 31px); color: #7ca6ff; filter: drop-shadow(0 0 8px rgba(96,151,255,.4)); }
+.search-pill svg { width: clamp(22px, 2.35vw, 31px); height: clamp(22px, 2.35vw, 31px); color: #7ca6ff; }
 .search-pill svg path:first-child { color: #f35b44; }
 .search-pill:hover, .search-pill.is-focused { color: #fff; background: rgba(255,255,255,.1); box-shadow: 0 0 0 3px rgba(255,255,255,.68), 0 12px 28px rgba(0,0,0,.25); transform: scale(1.035); }
 .search-pill.is-listening svg { color: #ff6456; animation: listening 1s ease-in-out infinite; }

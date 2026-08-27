@@ -38,6 +38,15 @@ import android.content.IntentFilter;
 
 public class MainActivity extends Activity {
 
+    // The home screen displays a small app rail. Limiting the bridge payload
+    // avoids repeatedly encoding a large number of system-app icons on
+    // low-memory Android 7 receivers while keeping a practical app list.
+    private static final int MAX_LAUNCHER_APPS = 48;
+    private static final int MAX_HOME_BANNERS = 8;
+    private static final int APP_ICON_SIZE = 96;
+    private static final int APP_BANNER_WIDTH = 240;
+    private static final int APP_BANNER_HEIGHT = 135;
+
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private static final int FILE_REQUEST = 1001;
@@ -359,7 +368,10 @@ private BroadcastReceiver refreshReceiver;
                 intent.addCategory(Intent.CATEGORY_LAUNCHER);
                 List<ResolveInfo> apps = pm.queryIntentActivities(intent, 0);
                 JSONArray arr = new JSONArray();
+                int addedApps = 0;
+                int loadedBanners = 0;
                 for (ResolveInfo ri : apps) {
+                    if (addedApps >= MAX_LAUNCHER_APPS) break;
                     try {
                         String pkg = ri.activityInfo.packageName;
                         if (pkg.equals("com.mytv.launcher")) continue;
@@ -377,22 +389,24 @@ private BroadcastReceiver refreshReceiver;
                                 }
                             } catch (Exception be) {}
 
-                            if (banner != null) {
-                                // بانر TV حقيقي
-                                Bitmap bmpB = Bitmap.createBitmap(320, 180, Bitmap.Config.ARGB_8888);
+                            if (banner != null && loadedBanners < MAX_HOME_BANNERS) {
+                                // The launcher rail is small. A 240×135 banner remains
+                                // sharp at TV distance while reducing decoded memory.
+                                Bitmap bmpB = Bitmap.createBitmap(APP_BANNER_WIDTH, APP_BANNER_HEIGHT, Bitmap.Config.ARGB_8888);
                                 Canvas cvB = new Canvas(bmpB);
-                                banner.setBounds(0, 0, 320, 180);
+                                banner.setBounds(0, 0, APP_BANNER_WIDTH, APP_BANNER_HEIGHT);
                                 banner.draw(cvB);
                                 ByteArrayOutputStream baosB = new ByteArrayOutputStream();
                                 bmpB.compress(Bitmap.CompressFormat.PNG, 85, baosB);
                                 bannerB64 = Base64.encodeToString(baosB.toByteArray(), Base64.NO_WRAP);
                                 bmpB.recycle();
+                                loadedBanners++;
                             }
 
-                            // أيقونة عادية دائماً
-                            Bitmap bmp = Bitmap.createBitmap(108, 108, Bitmap.Config.ARGB_8888);
+                            // Smaller application icons also lower the JSON bridge payload.
+                            Bitmap bmp = Bitmap.createBitmap(APP_ICON_SIZE, APP_ICON_SIZE, Bitmap.Config.ARGB_8888);
                             Canvas canvas = new Canvas(bmp);
-                            icon.setBounds(0, 0, 108, 108);
+                            icon.setBounds(0, 0, APP_ICON_SIZE, APP_ICON_SIZE);
                             icon.draw(canvas);
                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
                             bmp.compress(Bitmap.CompressFormat.PNG, 90, baos);
@@ -405,6 +419,7 @@ private BroadcastReceiver refreshReceiver;
                         obj.put("icon", iconB64);
                         if (!bannerB64.isEmpty()) obj.put("banner", bannerB64);
                         arr.put(obj);
+                        addedApps++;
                     } catch (Exception e) {}
                 }
                 return arr.toString();
