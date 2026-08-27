@@ -345,7 +345,17 @@ export default function App() {
 
   useEffect(() => {
     const selector = `[data-focus-zone="${focus.zone}"][data-focus-index="${focus.index}"]`;
-    document.querySelector<HTMLElement>(selector)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    const activeElement = document.querySelector<HTMLElement>(selector);
+    if (!activeElement) return;
+
+    // Android 7 WebView can lack the object-form scrollIntoView API. Retain
+    // smooth nearest-edge scrolling on newer engines and use the boolean API
+    // on the receiver's older WebView.
+    if ('scrollBehavior' in document.documentElement.style) {
+      activeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    } else {
+      activeElement.scrollIntoView(false);
+    }
   }, [focus]);
 
   const boostDevice = () => {

@@ -181,3 +181,47 @@ button:focus-visible { outline: 3px solid rgba(255,255,255,.92); outline-offset:
   .side-rail { top: 26vh; gap: 6.5vh; }
   .media-section { padding-bottom: 4.2vh; }
 }
+
+/* Android 7 / Chrome 51 fallback: preserve the same TV composition without CSS clamp(), grid, gap or aspect-ratio. */
+@supports not (width: clamp(1px, 1vw, 2px)) {
+  .launcher-header { height: 15.5vh; padding: 3.4vh 5vw 0 10.8vw; }
+  .search-pill { gap: 1vw; font-size: 1.45vw; }
+  .search-pill svg { width: 2.35vw; height: 2.35vw; }
+  .header-actions { gap: 2vw; }
+  .header-actions time { font-size: 2vw; }
+  .header-icon { width: 3vw; height: 3vw; }
+  .header-icon svg { width: 1.75vw; height: 1.75vw; }
+  .side-rail { top: 18vh; width: 11.8vw; gap: 6.6vh; padding-top: .8vh; }
+  .side-action { font-size: 1.15vw; }
+  .side-icon { width: 4.4vw; height: 4.4vw; }
+  .launcher-content { top: 18vh; left: 12.3vw; padding-right: 1.6vw; padding-bottom: 2.5vh; }
+  .app-shortcuts { padding-bottom: 3.1vh; }
+  .shortcut-track { gap: 1.15vw; }
+  .app-tile { flex-basis: 9.6vw; height: 7.4vw; }
+  .app-banner-caption { font-size: .8vw; }
+  .add-tile { flex-basis: 4.5vw; }
+  .media-section { padding-bottom: 3.25vh; }
+  .media-section h1 { margin-bottom: 1.55vh; font-size: 1.6vw; }
+  .media-track { grid-auto-columns: 24.4vw; grid-template-rows: 14.6vw; gap: 1.1vw; }
+  .card-copy small { font-size: .74vw; }
+  .card-copy strong { font-size: 2.5vw; }
+  .toast { right: 4vw; bottom: 4vh; }
+  .modal-backdrop { padding: 24px; }
+}
+
+@supports not (display: grid) {
+  .media-track { display: flex; height: 14.6vw; }
+  .media-card { flex: 0 0 24.4vw; height: 14.6vw; margin-right: 1.1vw; }
+}
+
+@supports not (gap: 1px) {
+  .shortcut-track > * { margin-right: 1.15vw; }
+  .header-actions > * { margin-left: 2vw; }
+}
+
+@supports not (aspect-ratio: 1 / 1) {
+  .app-monogram, .brand-g-tv { height: 45%; }
+}
+
+/* `inset` is ignored by older WebViews, so retain the equivalent box edges. */
+.dark-vignette, .media-card::before, .media-card::after, .card-shimmer, .modal-backdrop { top: 0; right: 0; bottom: 0; left: 0; }
