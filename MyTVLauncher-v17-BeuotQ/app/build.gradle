@@ -8,8 +8,8 @@ android {
         applicationId "com.mytv.launcher"
         minSdkVersion 24
         targetSdkVersion 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1-diagnostics"
     }
 
     buildTypes {
@@ -17,6 +17,10 @@ android {
             minifyEnabled false
         }
         debug {
+            // Separate diagnostic package so this APK can be installed beside
+            // an older launcher build signed with a different key.
+            applicationIdSuffix ".diagnostic"
+            versionNameSuffix "-debug"
             minifyEnabled false
         }
     }

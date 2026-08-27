@@ -154,7 +154,7 @@ button:focus-visible { outline: 3px solid rgba(255,255,255,.92); outline-offset:
 .modal-backdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(4,4,9,.7); backdrop-filter: blur(10px); }
 .launcher-modal { position: relative; width: min(420px, 92vw); display: flex; flex-direction: column; gap: 9px; padding: 25px; border: 1px solid rgba(255,255,255,.18); border-radius: 19px; color: #f9f8fb; background: linear-gradient(145deg, #292737, #161621); box-shadow: 0 28px 75px rgba(0,0,0,.56); }
 .launcher-modal button:not(.modal-close) { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid rgba(255,255,255,.11); border-radius: 10px; color: #ecebf0; background: rgba(255,255,255,.08); text-align: left; cursor: pointer; transition: background .15s ease, transform .15s ease; }
-.launcher-modal button:not(.modal-close):hover { background: rgba(255,255,255,.18); transform: translateX(3px); }
+.launcher-modal button:not(.modal-close):hover, .launcher-modal button:not(.modal-close).is-focused { background: rgba(255,255,255,.18); transform: translateX(3px); outline: 2px solid #fff; outline-offset: 2px; }
 .launcher-modal button svg { width: 18px; height: 18px; }
 .launcher-modal .danger { color: #ffb8bf; background: rgba(159,35,47,.25) !important; }
 .modal-close { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; color: #d1cfd6; background: transparent; cursor: pointer; }
@@ -225,3 +225,15 @@ button:focus-visible { outline: 3px solid rgba(255,255,255,.92); outline-offset:
 
 /* `inset` is ignored by older WebViews, so retain the equivalent box edges. */
 .dark-vignette, .media-card::before, .media-card::after, .card-shimmer, .modal-backdrop { top: 0; right: 0; bottom: 0; left: 0; }
+
+.launcher-fallback {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #12131b;
+  color: #f4f1f7;
+  font: 500 18px/1.5 sans-serif;
+  text-align: center;
+}

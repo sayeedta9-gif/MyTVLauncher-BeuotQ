@@ -5,11 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#202124" />
     <title>Android TV Launcher</title>
-    <link rel="stylesheet" href="./assets/index-CShA8K6j.css" />
+    <link rel="stylesheet" href="./assets/index-BGZBggqG.css" />
   </head>
   <body>
     <div id="root"></div>
-    <script src="./assets/polyfills-legacy-Bcnxcen9.js"></script>
-    <script>System.import('./assets/index-legacy-tWC5h9Ne.js');</script>
+    <script>
+      (function () {
+        function report(source, message, stack) {
+          try {
+            if (window.AndroidBridge && window.AndroidBridge.logClientError) {
+              window.AndroidBridge.logClientError(String(source || 'bootstrap'), String(message || 'Unknown error'), String(stack || ''));
+            }
+          } catch (ignored) {}
+        }
+        window.__launcherReportError = report;
+        window.addEventListener('error', function (event) {
+          report('bootstrap.error', event.message, (event.filename || '') + ':' + (event.lineno || 0) + ':' + (event.colno || 0) + '\n' + ((event.error && event.error.stack) || ''));
+        });
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason || {};
+          report('bootstrap.rejection', reason.message || String(reason), reason.stack || '');
+        });
+      }());
+    </script>
+    <script src="./assets/polyfills-legacy-Bsr3RPA1.js"></script>
+    <script>System.import('./assets/index-legacy-dCoKl2aB.js');</script>
   </body>
 </html>

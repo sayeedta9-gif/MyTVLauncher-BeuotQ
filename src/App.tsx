@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Clapperboard,
+  FileText,
   Grid3X3,
   Mic,
   Play,
   Plus,
   Settings,
   Sparkles,
+  Trash2,
   Tv,
   Volume2,
   X,
@@ -54,6 +56,10 @@ declare global {
       requestNotificationAccess(): void;
       uninstallApp(pkg: string): void;
       startVoiceSearch(): void;
+      logClientError?(source: string, message: string, stack: string): void;
+      getErrorLogPath?(): string;
+      exportErrorLog?(): string;
+      clearErrorLog?(): boolean;
     };
     tvKey?: (key: string) => void;
     openAllSettings?: () => void;
@@ -102,6 +108,43 @@ const CONTINUE_TITLES = [
   ['Night Call', 'Continue watching'],
 ];
 
+function reportClientError(source: string, message: string, stack = '') {
+  try {
+    window.AndroidBridge?.logClientError?.(
+      source.slice(0, 120),
+      String(message).slice(0, 4_000),
+      String(stack).slice(0, 12_000),
+    );
+  } catch {
+    // Logging must never interfere with the launcher itself.
+  }
+}
+
+class LauncherErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  private readonly launchContent: React.ReactNode;
+  state = { hasError: false };
+
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.launchContent = props.children;
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    reportClientError('React', error.message, `${error.stack || ''}\n${info.componentStack || ''}`);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="launcher-fallback">The launcher encountered an error. Open diagnostics from the next launch.</div>;
+    }
+    return this.launchContent;
+  }
+}
+
 function appInitials(name: string) {
   return name
     .split(/\s+/)
@@ -130,13 +173,14 @@ function AppVisual({ app, className = '', preferBanner = false }: { app: AppItem
   return <span className={`app-monogram ${className}`}>{appInitials(app.name)}</span>;
 }
 
-export default function App() {
+function Launcher() {
   const [apps, setApps] = useState<AppItem[]>([]);
   const [focus, setFocus] = useState<FocusState>({ zone: 'shortcuts', index: 1 });
   const [activeSide, setActiveSide] = useState(0);
   const [currentTime, setCurrentTime] = useState('');
   const [memory, setMemory] = useState<MemoryInfo>({ avail: 0, total: 0 });
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [settingsFocus, setSettingsFocus] = useState(0);
   const [selectedApp, setSelectedApp] = useState<AppItem | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const directionFrameRef = useRef<number | null>(null);
@@ -148,7 +192,8 @@ export default function App() {
       const raw = window.AndroidBridge?.getInstalledApps();
       const parsed = raw ? JSON.parse(raw) : [];
       setApps(Array.isArray(parsed) && parsed.length > 0 ? parsed : MOCK_APPS);
-    } catch {
+    } catch (error) {
+      reportClientError('refreshApps', 'Could not read installed applications', error instanceof Error ? error.stack || error.message : String(error));
       setApps(MOCK_APPS);
     }
   }, []);
@@ -157,9 +202,25 @@ export default function App() {
     try {
       const raw = window.AndroidBridge?.getMemoryInfo?.();
       if (raw) setMemory(JSON.parse(raw));
-    } catch {
-      // Status is optional for browser preview.
+    } catch (error) {
+      reportClientError('refreshStatus', 'Could not read memory status', error instanceof Error ? error.stack || error.message : String(error));
     }
+  }, []);
+
+  useEffect(() => {
+    const onError = (event: ErrorEvent) => {
+      reportClientError('window.error', event.message || 'Unknown JavaScript error', `${event.filename || ''}:${event.lineno || 0}:${event.colno || 0}\n${event.error?.stack || ''}`);
+    };
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+      reportClientError('window.unhandledrejection', reason.message, reason.stack || '');
+    };
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandledRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    };
   }, []);
 
   useEffect(() => {
@@ -229,8 +290,35 @@ export default function App() {
   }, [notify]);
 
   const showSettings = useCallback(() => {
+    setSettingsFocus(0);
     setSettingsOpen(true);
   }, []);
+
+  const boostDevice = useCallback(() => {
+    const freed = window.AndroidBridge?.boostDevice?.();
+    refreshStatus();
+    notify(typeof freed === 'number' ? `${freed} MB of memory refreshed` : 'Device memory refreshed');
+  }, [notify, refreshStatus]);
+
+  const exportErrorLog = useCallback(() => {
+    try {
+      const path = window.AndroidBridge?.exportErrorLog?.();
+      notify(path ? 'Diagnostic log saved in Downloads' : 'No errors have been recorded yet');
+    } catch (error) {
+      reportClientError('exportErrorLog', 'Could not export diagnostic log', error instanceof Error ? error.stack || error.message : String(error));
+      notify('Could not export diagnostic log');
+    }
+  }, [notify]);
+
+  const clearErrorLog = useCallback(() => {
+    try {
+      const cleared = window.AndroidBridge?.clearErrorLog?.();
+      notify(cleared ? 'Diagnostic log cleared' : 'Could not clear diagnostic log');
+    } catch (error) {
+      reportClientError('clearErrorLog', 'Could not clear diagnostic log', error instanceof Error ? error.stack || error.message : String(error));
+      notify('Could not clear diagnostic log');
+    }
+  }, [notify]);
 
   const focusedApp = useCallback((): AppItem | undefined => {
     if (focus.zone === 'shortcuts') return shortcuts[focus.index];
@@ -249,7 +337,34 @@ export default function App() {
 
   const handleTvKey = useCallback((key: string) => {
     if (isSettingsOpen) {
-      if (key === 'BACK') setSettingsOpen(false);
+      if (key === 'BACK') {
+        setSettingsOpen(false);
+        return;
+      }
+      if (key === 'UP') {
+        setSettingsFocus((previous) => Math.max(0, previous - 1));
+        return;
+      }
+      if (key === 'DOWN') {
+        setSettingsFocus((previous) => Math.min(4, previous + 1));
+        return;
+      }
+      if (key === 'OK') {
+        if (settingsFocus === 0) {
+          setSettingsOpen(false);
+          window.AndroidBridge?.openSystemSettings?.();
+        } else if (settingsFocus === 1) {
+          setSettingsOpen(false);
+          window.AndroidBridge?.requestNotificationAccess?.();
+        } else if (settingsFocus === 2) {
+          boostDevice();
+        } else if (settingsFocus === 3) {
+          exportErrorLog();
+        } else {
+          clearErrorLog();
+        }
+        return;
+      }
       return;
     }
 
@@ -319,7 +434,7 @@ export default function App() {
       }
       return previous;
     });
-  }, [activeSide, focusedApp, isSettingsOpen, launchApp, showSettings, startVoiceSearch, zoneLength]);
+  }, [activeSide, boostDevice, clearErrorLog, exportErrorLog, focusedApp, isSettingsOpen, launchApp, settingsFocus, showSettings, startVoiceSearch, zoneLength]);
 
   const dispatchTvKey = useCallback((key: string) => {
     const isDirection = key === 'UP' || key === 'DOWN' || key === 'LEFT' || key === 'RIGHT';
@@ -394,12 +509,6 @@ export default function App() {
       }
     });
   }, [focus]);
-
-  const boostDevice = () => {
-    const freed = window.AndroidBridge?.boostDevice?.();
-    refreshStatus();
-    notify(typeof freed === 'number' ? `${freed} MB of memory refreshed` : 'Device memory refreshed');
-  };
 
   return (
     <div className="launcher-shell">
@@ -526,14 +635,20 @@ export default function App() {
           <section className="launcher-modal settings-modal" role="dialog" aria-modal="true" aria-label="Launcher settings">
             <button className="modal-close" aria-label="Close" onClick={() => setSettingsOpen(false)}><X /></button>
             <div className="modal-heading"><Settings /> <strong>Launcher settings</strong></div>
-            <button onClick={() => { setSettingsOpen(false); window.AndroidBridge?.openSystemSettings?.(); }}><Settings />Android system settings</button>
-            <button onClick={() => { setSettingsOpen(false); window.AndroidBridge?.requestNotificationAccess?.(); }}><Volume2 />Notification permissions</button>
-            <button onClick={boostDevice}><Zap />{memory.avail ? `${memory.avail} MB available` : 'Refresh device memory'}</button>
+            <button className={settingsFocus === 0 ? 'is-focused' : ''} onFocus={() => setSettingsFocus(0)} onClick={() => { setSettingsOpen(false); window.AndroidBridge?.openSystemSettings?.(); }}><Settings />Android system settings</button>
+            <button className={settingsFocus === 1 ? 'is-focused' : ''} onFocus={() => setSettingsFocus(1)} onClick={() => { setSettingsOpen(false); window.AndroidBridge?.requestNotificationAccess?.(); }}><Volume2 />Notification permissions</button>
+            <button className={settingsFocus === 2 ? 'is-focused' : ''} onFocus={() => setSettingsFocus(2)} onClick={boostDevice}><Zap />{memory.avail ? `${memory.avail} MB available` : 'Refresh device memory'}</button>
+            <button className={settingsFocus === 3 ? 'is-focused' : ''} onFocus={() => setSettingsFocus(3)} onClick={exportErrorLog}><FileText />Export diagnostic log</button>
+            <button className={settingsFocus === 4 ? 'is-focused' : ''} onFocus={() => setSettingsFocus(4)} onClick={clearErrorLog}><Trash2 />Clear diagnostic log</button>
           </section>
         </div>
       )}
     </div>
   );
+}
+
+export default function App() {
+  return <LauncherErrorBoundary><Launcher /></LauncherErrorBoundary>;
 }
 
 function MediaRail({

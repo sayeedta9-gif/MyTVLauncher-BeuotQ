@@ -72,11 +72,14 @@ public class NotificationService extends NotificationListenerService {
 
                     arr.put(obj);
                     if (arr.length() >= 20) break; // حد أقصى 20 إشعار
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                    ErrorLogger.error("NotificationService.item", "Could not process a notification", e);
+                }
             }
 
             cachedJson = arr.toString();
         } catch (Exception e) {
+            ErrorLogger.error("NotificationService.updateCache", "Could not refresh notification cache", e);
             cachedJson = "[]";
         }
     }

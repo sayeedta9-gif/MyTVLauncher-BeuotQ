@@ -47,6 +47,25 @@ const androidHtml = `<!doctype html>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        function report(source, message, stack) {
+          try {
+            if (window.AndroidBridge && window.AndroidBridge.logClientError) {
+              window.AndroidBridge.logClientError(String(source || 'bootstrap'), String(message || 'Unknown error'), String(stack || ''));
+            }
+          } catch (ignored) {}
+        }
+        window.__launcherReportError = report;
+        window.addEventListener('error', function (event) {
+          report('bootstrap.error', event.message, (event.filename || '') + ':' + (event.lineno || 0) + ':' + (event.colno || 0) + '\\n' + ((event.error && event.error.stack) || ''));
+        });
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason || {};
+          report('bootstrap.rejection', reason.message || String(reason), reason.stack || '');
+        });
+      }());
+    </script>
     <script src="./${legacyPolyfills}"></script>
     <script>System.import('./${legacyEntry}');</script>
   </body>

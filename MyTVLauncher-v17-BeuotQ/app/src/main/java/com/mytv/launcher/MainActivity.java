@@ -17,11 +17,14 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.content.SharedPreferences;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -137,6 +140,17 @@ private BroadcastReceiver refreshReceiver;
 
             webView.setWebChromeClient(new WebChromeClient() {
                 @Override
+                public boolean onConsoleMessage(ConsoleMessage message) {
+                    String detail = message.message() + " (" + message.sourceId() + ":" + message.lineNumber() + ")";
+                    if (message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                        ErrorLogger.error("WebView.console", detail, null);
+                    } else if (message.messageLevel() == ConsoleMessage.MessageLevel.WARNING) {
+                        ErrorLogger.warning("WebView.console", detail);
+                    }
+                    return super.onConsoleMessage(message);
+                }
+
+                @Override
                 public void onPermissionRequest(PermissionRequest request) {
                     request.grant(request.getResources());
                 }
@@ -154,6 +168,15 @@ private BroadcastReceiver refreshReceiver;
 
             webView.setWebViewClient(new WebViewClient() {
                 @Override
+                public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                    if (request != null && request.isForMainFrame()) {
+                        String url = request.getUrl() == null ? "" : request.getUrl().toString();
+                        String detail = error == null ? "Unknown WebView error" : error.getDescription().toString();
+                        ErrorLogger.error("WebView.load", detail + " | " + url, null);
+                    }
+                }
+
+                @Override
                 public boolean shouldOverrideUrlLoading(WebView view, String url) {
                     if (url != null && url.startsWith("file://")) return false;
                     try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception e) {}
@@ -164,7 +187,7 @@ private BroadcastReceiver refreshReceiver;
             webView.loadUrl("file:///android_asset/launcher.html");
 
         } catch (Exception e) {
-            Log.e("TV", "onCreate: " + e.getMessage());
+            ErrorLogger.error("MainActivity.onCreate", "Launcher initialization failed", e);
         }
     }
 
@@ -363,7 +386,7 @@ private BroadcastReceiver refreshReceiver;
                     if (addedApps >= MAX_LAUNCHER_APPS) break;
                     try {
                         String pkg = ri.activityInfo.packageName;
-                        if (pkg.equals("com.mytv.launcher")) continue;
+                        if (pkg.equals(getPackageName())) continue;
                         String label = ri.loadLabel(pm).toString();
                         Drawable icon = ri.loadIcon(pm);
                         String iconB64 = "";
@@ -416,7 +439,31 @@ private BroadcastReceiver refreshReceiver;
                     } catch (Exception e) {}
                 }
                 return arr.toString();
-            } catch (Exception e) { return "[]"; }
+            } catch (Exception e) {
+                ErrorLogger.error("Bridge.getInstalledApps", "Could not load launcher applications", e);
+                return "[]";
+            }
+        }
+
+        @JavascriptInterface
+        public void logClientError(String source, String message, String stack) {
+            String detail = (message == null ? "" : message) + (stack == null || stack.isEmpty() ? "" : "\n" + stack);
+            ErrorLogger.error("JavaScript." + source, detail, null);
+        }
+
+        @JavascriptInterface
+        public String getErrorLogPath() {
+            return ErrorLogger.getLogPath(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public String exportErrorLog() {
+            return ErrorLogger.exportToDownloads(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public boolean clearErrorLog() {
+            return ErrorLogger.clear(MainActivity.this);
         }
 
         @JavascriptInterface

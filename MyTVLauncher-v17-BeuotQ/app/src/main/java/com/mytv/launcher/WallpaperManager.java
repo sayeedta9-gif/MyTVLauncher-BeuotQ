@@ -72,7 +72,7 @@ public class WallpaperManager {
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error loading wallpaper: " + e.getMessage());
+            ErrorLogger.error(TAG + ".load", "Error loading wallpaper", e);
         }
 
         loadDefaultFallback(context);
@@ -144,7 +144,7 @@ public class WallpaperManager {
                         previous = null;
                     }
                 } catch (Exception e) {
-                    Log.e(TAG, "Error saving wallpaper: " + e.getMessage());
+                    ErrorLogger.error(TAG + ".save", "Error saving wallpaper", e);
                 }
             }
         });
@@ -164,7 +164,7 @@ public class WallpaperManager {
             options.inPreferredConfig = Bitmap.Config.RGB_565;
             return BitmapFactory.decodeStream(stream, null, options);
         } catch (Exception e) {
-            Log.e(TAG, "Error loading default fallback wallpaper: " + e.getMessage());
+            ErrorLogger.error(TAG + ".default", "Error loading default fallback wallpaper", e);
             return null;
         } finally {
             try { if (stream != null) stream.close(); } catch (Exception e) {}
@@ -190,7 +190,7 @@ public class WallpaperManager {
             Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, sampledOptions(bounds));
             return bitmap;
         } catch (Exception e) {
-            Log.e(TAG, "Error decoding wallpaper: " + e.getMessage());
+            ErrorLogger.error(TAG + ".decode", "Error decoding wallpaper", e);
             return null;
         }
     }
@@ -215,7 +215,7 @@ public class WallpaperManager {
             output.flush();
             output.close();
         } catch (Exception e) {
-            Log.e(TAG, "Error saving wallpaper: " + e.getMessage());
+            ErrorLogger.error(TAG + ".saveDisk", "Error saving wallpaper to disk", e);
         }
     }
 }
