@@ -111,9 +111,10 @@ function appInitials(name: string) {
     .toUpperCase();
 }
 
-function AppVisual({ app, className = '' }: { app: AppItem; className?: string }) {
-  if (app.icon) {
-    return <img className={`app-visual ${className}`} src={`data:image/png;base64,${app.icon}`} alt="" />;
+function AppVisual({ app, className = '', preferBanner = false }: { app: AppItem; className?: string; preferBanner?: boolean }) {
+  const visual = preferBanner && app.banner ? app.banner : app.icon;
+  if (visual) {
+    return <img className={`app-visual ${className}`} src={`data:image/png;base64,${visual}`} alt="" />;
   }
 
   const name = app.name.toLowerCase();
@@ -427,7 +428,8 @@ export default function App() {
                   onContextMenu={(event) => { event.preventDefault(); setFocus({ zone: 'shortcuts', index }); setSelectedApp(app); }}
                   aria-label={`Open ${app.name}`}
                 >
-                  <AppVisual app={app} />
+                  <AppVisual app={app} preferBanner />
+                  <span className="app-banner-caption">{app.name}</span>
                 </button>
               );
             })}
