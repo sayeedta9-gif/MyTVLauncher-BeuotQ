@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Clapperboard,
   Grid3X3,
@@ -139,6 +139,9 @@ export default function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<AppItem | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const directionFrameRef = useRef<number | null>(null);
+  const queuedDirectionRef = useRef<string | null>(null);
+  const scrollFrameRef = useRef<number | null>(null);
 
   const refreshApps = useCallback(() => {
     try {
@@ -318,14 +321,37 @@ export default function App() {
     });
   }, [activeSide, focusedApp, isSettingsOpen, launchApp, showSettings, startVoiceSearch, zoneLength]);
 
+  const dispatchTvKey = useCallback((key: string) => {
+    const isDirection = key === 'UP' || key === 'DOWN' || key === 'LEFT' || key === 'RIGHT';
+    if (!isDirection) {
+      handleTvKey(key);
+      return;
+    }
+
+    // Some low-power Android 7 WebViews queue repeat events faster than React
+    // can paint. Keep the latest direction and render at most once per frame.
+    queuedDirectionRef.current = key;
+    if (directionFrameRef.current !== null) return;
+
+    directionFrameRef.current = window.requestAnimationFrame(() => {
+      directionFrameRef.current = null;
+      const queuedKey = queuedDirectionRef.current;
+      queuedDirectionRef.current = null;
+      if (queuedKey) handleTvKey(queuedKey);
+    });
+  }, [handleTvKey]);
+
   useEffect(() => {
-    window.tvKey = handleTvKey;
+    window.tvKey = dispatchTvKey;
     window.loadApps = refreshApps;
     window.openAllSettings = showSettings;
     window.openSrm = () => setFocus({ zone: 'search', index: 0 });
     window.askNotifPerm = () => undefined;
     window.closeVoice = () => document.getElementById('micBtn')?.classList.remove('is-listening');
-  }, [handleTvKey, refreshApps, showSettings]);
+    return () => {
+      if (directionFrameRef.current !== null) window.cancelAnimationFrame(directionFrameRef.current);
+    };
+  }, [dispatchTvKey, refreshApps, showSettings]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -336,26 +362,37 @@ export default function App() {
       const mapped = keyMap[event.key];
       if (mapped) {
         event.preventDefault();
-        handleTvKey(mapped);
+        dispatchTvKey(mapped);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handleTvKey]);
+  }, [dispatchTvKey]);
 
   useEffect(() => {
-    const selector = `[data-focus-zone="${focus.zone}"][data-focus-index="${focus.index}"]`;
-    const activeElement = document.querySelector<HTMLElement>(selector);
-    if (!activeElement) return;
+    if (focus.zone !== 'featured' && focus.zone !== 'continue') return;
+    if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current);
 
-    // Android 7 WebView can lack the object-form scrollIntoView API. Retain
-    // smooth nearest-edge scrolling on newer engines and use the boolean API
-    // on the receiver's older WebView.
-    if ('scrollBehavior' in document.documentElement.style) {
-      activeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-    } else {
-      activeElement.scrollIntoView(false);
-    }
+    // Only move the vertical rail when the newly focused card is actually
+    // outside the viewport. This avoids queuing smooth scroll animations for
+    // every directional event on older Android TV WebViews.
+    scrollFrameRef.current = window.requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      const activeElement = document.querySelector<HTMLElement>(
+        `[data-focus-zone="${focus.zone}"][data-focus-index="${focus.index}"]`,
+      );
+      const container = document.querySelector<HTMLElement>('.launcher-content');
+      if (!activeElement || !container) return;
+
+      const card = activeElement.getBoundingClientRect();
+      const viewport = container.getBoundingClientRect();
+      const safePadding = 18;
+      if (card.top < viewport.top + safePadding) {
+        container.scrollTop -= viewport.top + safePadding - card.top;
+      } else if (card.bottom > viewport.bottom - safePadding) {
+        container.scrollTop += card.bottom - (viewport.bottom - safePadding);
+      }
+    });
   }, [focus]);
 
   const boostDevice = () => {

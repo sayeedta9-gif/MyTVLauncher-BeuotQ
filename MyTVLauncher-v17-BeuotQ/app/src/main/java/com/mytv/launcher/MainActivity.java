@@ -262,6 +262,14 @@ private BroadcastReceiver refreshReceiver;
 
     private boolean isLongPressHandled = false;
 
+    // dispatchKeyEvent already runs on the UI thread. Calling WebView directly
+    // avoids adding a second message to the UI queue for every D-pad event.
+    private void evaluateLauncherScript(String script) {
+        try {
+            if (webView != null) webView.evaluateJavascript(script, null);
+        } catch (Exception e) {}
+    }
+
     // ══ الريموت — كل الأزرار ══
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
@@ -278,12 +286,7 @@ private BroadcastReceiver refreshReceiver;
             if (action == KeyEvent.ACTION_DOWN) {
                 if (event.isLongPress()) {
                     isLongPressHandled = true;
-                    webView.post(new Runnable() {
-                        public void run() {
-                            webView.evaluateJavascript(
-                                "(function(){if(typeof tvKey==='function'){tvKey('OK_LONG');}})()", null);
-                        }
-                    });
+                    evaluateLauncherScript("window.tvKey&&window.tvKey('OK_LONG')");
                     return true;
                 }
                 if (event.getRepeatCount() == 0) {
@@ -296,41 +299,31 @@ private BroadcastReceiver refreshReceiver;
                     isLongPressHandled = false;
                     return true;
                 }
-                webView.post(new Runnable() {
-                    public void run() {
-                        webView.evaluateJavascript(
-                            "(function(){if(typeof tvKey==='function'){tvKey('OK');}})()", null);
-                    }
-                });
+                evaluateLauncherScript("window.tvKey&&window.tvKey('OK')");
                 return true;
             }
         }
 
         if (action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event);
 
-        final String js;
+        final String script;
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
-            case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP:    js="tvKey('UP')"; break;
+            case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP:    script="window.tvKey&&window.tvKey('UP')"; break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
-            case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN:  js="tvKey('DOWN')"; break;
+            case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN:  script="window.tvKey&&window.tvKey('DOWN')"; break;
             case KeyEvent.KEYCODE_DPAD_LEFT:
-            case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT:  js="tvKey('LEFT')"; break;
+            case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT:  script="window.tvKey&&window.tvKey('LEFT')"; break;
             case KeyEvent.KEYCODE_DPAD_RIGHT:
-            case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT: js="tvKey('RIGHT')"; break;
+            case KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT: script="window.tvKey&&window.tvKey('RIGHT')"; break;
             case KeyEvent.KEYCODE_BACK:
-            case KeyEvent.KEYCODE_ESCAPE:                  js="tvKey('BACK')"; break;
-            case KeyEvent.KEYCODE_MENU:                    js="openAllSettings()"; break;
-            case KeyEvent.KEYCODE_SEARCH:                  js="openSrm()"; break;
+            case KeyEvent.KEYCODE_ESCAPE:                  script="window.tvKey&&window.tvKey('BACK')"; break;
+            case KeyEvent.KEYCODE_MENU:                    script="window.openAllSettings&&window.openAllSettings()"; break;
+            case KeyEvent.KEYCODE_SEARCH:                  script="window.openSrm&&window.openSrm()"; break;
             default: return super.dispatchKeyEvent(event);
         }
 
-        webView.post(new Runnable() {
-            public void run() {
-                webView.evaluateJavascript(
-                    "(function(){if(typeof tvKey==='function'){" + js + "}})()", null);
-            }
-        });
+        evaluateLauncherScript(script);
         return true;
     }
 
@@ -342,14 +335,7 @@ private BroadcastReceiver refreshReceiver;
                                keyCode == KeyEvent.KEYCODE_BUTTON_A);
         if (isSelectKey) {
             isLongPressHandled = true;
-            if (webView != null) {
-                webView.post(new Runnable() {
-                    public void run() {
-                        webView.evaluateJavascript(
-                            "(function(){if(typeof tvKey==='function'){tvKey('OK_LONG');}})()", null);
-                    }
-                });
-            }
+            evaluateLauncherScript("window.tvKey&&window.tvKey('OK_LONG')");
             return true;
         }
         return super.onKeyLongPress(keyCode, event);
