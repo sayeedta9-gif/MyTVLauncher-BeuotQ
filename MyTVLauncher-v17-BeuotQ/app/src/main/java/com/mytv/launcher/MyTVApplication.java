@@ -6,7 +6,7 @@ public class MyTVApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        // Early wallpaper preloading upon application startup / boot
-        WallpaperManager.preload(this);
+        // MainActivity owns the first visible wallpaper load. Avoiding a second
+        // preload decode lowers the RAM peak during launcher startup on S905X.
     }
 }

@@ -41,11 +41,12 @@ public class MainActivity extends Activity {
     // The home screen displays a small app rail. Limiting the bridge payload
     // avoids repeatedly encoding a large number of system-app icons on
     // low-memory Android 7 receivers while keeping a practical app list.
-    private static final int MAX_LAUNCHER_APPS = 48;
-    private static final int MAX_HOME_BANNERS = 8;
-    private static final int APP_ICON_SIZE = 96;
-    private static final int APP_BANNER_WIDTH = 240;
-    private static final int APP_BANNER_HEIGHT = 135;
+    private static final int MAX_LAUNCHER_APPS = 24;
+    private static final int MAX_HOME_BANNERS = 5;
+    private static final int MAX_VISUAL_APPS = 8;
+    private static final int APP_ICON_SIZE = 72;
+    private static final int APP_BANNER_WIDTH = 192;
+    private static final int APP_BANNER_HEIGHT = 108;
 
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
@@ -116,7 +117,9 @@ private BroadcastReceiver refreshReceiver;
 
             WebSettings s = webView.getSettings();
             s.setJavaScriptEnabled(true);
-            s.setDomStorageEnabled(true);
+            // The launcher persists settings through AndroidBridge/SharedPreferences,
+            // not localStorage. Disabling DOM storage saves WebView cache memory.
+            s.setDomStorageEnabled(false);
             s.setAllowFileAccess(true);
             s.setAllowFileAccessFromFileURLs(true);
             s.setAllowUniversalAccessFromFileURLs(true);
@@ -389,15 +392,19 @@ private BroadcastReceiver refreshReceiver;
                                 loadedBanners++;
                             }
 
-                            // Smaller application icons also lower the JSON bridge payload.
-                            Bitmap bmp = Bitmap.createBitmap(APP_ICON_SIZE, APP_ICON_SIZE, Bitmap.Config.ARGB_8888);
-                            Canvas canvas = new Canvas(bmp);
-                            icon.setBounds(0, 0, APP_ICON_SIZE, APP_ICON_SIZE);
-                            icon.draw(canvas);
-                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                            bmp.compress(Bitmap.CompressFormat.PNG, 90, baos);
-                            iconB64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-                            bmp.recycle();
+                            // Only the applications visible in the home rails need
+                            // image data. Remaining entries use a lightweight text
+                            // fallback in WebView until an all-apps page is opened.
+                            if (icon != null && addedApps < MAX_VISUAL_APPS) {
+                                Bitmap bmp = Bitmap.createBitmap(APP_ICON_SIZE, APP_ICON_SIZE, Bitmap.Config.ARGB_8888);
+                                Canvas canvas = new Canvas(bmp);
+                                icon.setBounds(0, 0, APP_ICON_SIZE, APP_ICON_SIZE);
+                                icon.draw(canvas);
+                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                bmp.compress(Bitmap.CompressFormat.PNG, 88, baos);
+                                iconB64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
+                                bmp.recycle();
+                            }
                         } catch (Exception e) {}
                         JSONObject obj = new JSONObject();
                         obj.put("pkg", pkg);
