@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
+    "sync:android": "rm -rf MyTVLauncher-v17-BeuotQ/app/src/main/assets/assets && mkdir -p MyTVLauncher-v17-BeuotQ/app/src/main/assets && cp -R dist/assets MyTVLauncher-v17-BeuotQ/app/src/main/assets/ && cp dist/index.html MyTVLauncher-v17-BeuotQ/app/src/main/assets/launcher.html",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
